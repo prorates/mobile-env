@@ -44,6 +44,6 @@
 ## 7. Documentation and close-out
 
 - [x] 7.1 State the Python floor in `README.md`'s installation section and drop the `pip install -r requirements.txt` equivalence claim; verify no README command references a deleted file
-- [ ] 7.2 Confirm CI is green on the pull request with lint, type-check and test all having actually executed — check the job logs, not just the check marks, since these jobs previously passed while running nothing
+- [x] 7.2 Confirm CI is green on the pull request with lint, type-check and test all having actually executed — check the job logs, not just the check marks, since these jobs previously passed while running nothing
 - [x] 7.3 File `/alemax:feedback` recording that `ci.yml`'s `mypy src` path assumes a src layout, so the meta side can carry the fix rather than re-delivering it
 - [ ] 7.4 After archiving, add the repo's H1 + `## Summary` header to the new `openspec/specs/package-distribution/spec.md`; verify `uv run --script bin/spec-summary-check.py` reports zero warnings
