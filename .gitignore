@@ -131,3 +131,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# claude-meta: session-local state, never tracked
+.local/
+.claude/settings.local.json
