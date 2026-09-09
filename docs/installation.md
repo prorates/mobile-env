@@ -2,7 +2,8 @@
 
 # Installation
 ## Prerequisites
-This project requires python3 (>=3.7)
+This project requires Python 3.10 or newer. It is tested on Ubuntu, Windows and macOS
+across Python 3.10-3.14.
 
 ## Stable release
 To install the latest stable version with `pip`, run:
@@ -15,3 +16,6 @@ The development version can be installed after cloning the [GitHub repository](h
 ```bash
 pip install -e .
 ```
+
+Optional extras: `.[test]` for the test suite, `.[docs]` to build this documentation, and
+`.[rllib]` for the Ray RLlib wrapper.

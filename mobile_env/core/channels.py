@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -18,7 +17,6 @@ class Channel:
     @abstractmethod
     def power_loss(self, bs: BaseStation, ue: UserEquipment) -> float:
         """Calculate power loss for transmission between BS and UE."""
-        pass
 
     def snr(self, bs: BaseStation, ue: UserEquipment):
         """Calculate SNR for transmission between BS and UE."""
@@ -29,15 +27,16 @@ class Channel:
     def isoline(
         self,
         bs: BaseStation,
-        ue_config: Dict,
-        map_bounds: Tuple,
+        ue_config: dict,
+        map_bounds: tuple,
         dthresh: float,
         num: int = 32,
     ):
         """Isoline where UEs receive at least `dthres` max. data."""
         width, height = map_bounds
 
-        dummy = UserEquipment(None, **ue_config)
+        # a probe UE used only to sample the channel; -1 marks it as not real
+        dummy = UserEquipment(-1, **ue_config)
 
         isoline = []
 
@@ -57,17 +56,17 @@ class Channel:
 
                 return self.datarate(bs, dummy, snr)
 
-            points = zip(xs.tolist(), ys.tolist())
+            points = zip(xs.tolist(), ys.tolist(), strict=True)
             datarates = np.asarray(list(map(drate, points)))
 
             # find largest / smallest x coordinate where drate is exceeded
-            (idx,) = np.where(datarates > dthresh)
-            idx = np.max(idx)
+            (exceeded,) = np.where(datarates > dthresh)
+            idx = int(np.max(exceeded))
 
             isoline.append((xs[idx], ys[idx]))
 
-        xs, ys = zip(*isoline)
-        return xs, ys
+        iso_xs, iso_ys = zip(*isoline, strict=True)
+        return iso_xs, iso_ys
 
     @classmethod
     def datarate(cls, bs: BaseStation, ue: UserEquipment, snr: float):
@@ -80,14 +79,15 @@ class Channel:
     @classmethod
     def boundary_collison(
         cls, theta: float, x0: float, y0: float, width: float, height: float
-    ) -> Tuple:
+    ) -> tuple:
         """Find point on map boundaries with angle theta to BS."""
         # collision with right boundary of map rectangle
         rgt_x1, rgt_y1 = width, np.tan(theta) * (width - x0) + y0
         # collision with upper boundary of map rectangle
-        upr_x1, upr_y1 = (-1) * np.tan(theta - 1 / 2 * np.pi) * (
-            height - y0
-        ) + x0, height
+        upr_x1, upr_y1 = (
+            (-1) * np.tan(theta - 1 / 2 * np.pi) * (height - y0) + x0,
+            height,
+        )
         # collision with left boundary of map rectangle
         lft_x1, lft_y1 = 0.0, np.tan(theta) * (0.0 - x0) + y0
         # collision with lower boundary of map rectangle

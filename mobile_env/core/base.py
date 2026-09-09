@@ -1,13 +1,13 @@
 import string
 from collections import Counter, defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Any
 
 import gymnasium
 import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
 import pygame
-from matplotlib import cm
+from matplotlib import colormaps
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from pygame import Surface
 
@@ -25,10 +25,18 @@ from mobile_env.handlers.central import MComCentralHandler
 
 class MComCore(gymnasium.Env):
     NOOP_ACTION = 0
-    metadata = {"render_modes": ["rgb_array", "human"]}
+    # one simulation step per frame; 4 fps is slow enough to follow UEs
+    # moving and connections being made and released
+    # not ClassVar: gymnasium.Env declares metadata as an instance variable
+    metadata: dict[str, Any] = {  # noqa: RUF012
+        "render_modes": ["rgb_array", "human"],
+        "render_fps": 4,
+    }
 
-    def __init__(self, stations, users, config={}, render_mode=None):
+    def __init__(self, stations, users, config=None, render_mode=None):
         super().__init__()
+
+        config = {} if config is None else config
 
         self.render_mode = render_mode
         assert render_mode in self.metadata["render_modes"] + [None]
@@ -75,13 +83,13 @@ class MComCore(gymnasium.Env):
         self.observation_space = self.handler.observation_space(self)
 
         # stores what UEs are currently active, i.e., request service
-        self.active: List[UserEquipment] = None
+        self.active: list[UserEquipment] = None
         # stores what downlink connections between BSs and UEs are active
-        self.connections: Dict[BaseStation, Set[UserEquipment]] = None
+        self.connections: dict[BaseStation, set[UserEquipment]] = None
         # stores datarate of downlink connections between UEs and BSs
-        self.datarates: Dict[Tuple[BaseStation, UserEquipment], float] = None
+        self.datarates: dict[tuple[BaseStation, UserEquipment], float] = None
         # stores each UE's (scaled) utility
-        self.utilities: Dict[UserEquipment, float] = None
+        self.utilities: dict[UserEquipment, float] = None
         # define RNG (as of now: unused)
         self.rng = None
 
@@ -281,7 +289,7 @@ class MComCore(gymnasium.Env):
         snr = self.channel.snr(bs, ue)
         return snr > ue.snr_threshold
 
-    def available_connections(self, ue: UserEquipment) -> Set:
+    def available_connections(self, ue: UserEquipment) -> set:
         """Returns set of what base stations users could connect to."""
         stations = self.stations.values()
         return {bs for bs in stations if self.check_connectivity(bs, ue)}
@@ -289,13 +297,13 @@ class MComCore(gymnasium.Env):
     def update_connections(self) -> None:
         """Release connections where BS and UE moved out-of-range."""
         connections = {
-            bs: set(ue for ue in ues if self.check_connectivity(bs, ue))
+            bs: {ue for ue in ues if self.check_connectivity(bs, ue)}
             for bs, ues in self.connections.items()
         }
         self.connections.clear()
         self.connections.update(connections)
 
-    def step(self, actions: Dict[int, int]):
+    def step(self, actions: dict[int, int]):
         assert not self.time_is_up, "step() called on terminated episode"
 
         # apply handler to transform actions to expected shape
@@ -339,7 +347,7 @@ class MComCore(gymnasium.Env):
             ue.x, ue.y = self.movement.move(ue)
 
         # terminate existing connections for exiting UEs
-        leaving = set([ue for ue in self.active if ue.extime <= self.time])
+        leaving = {ue for ue in self.active if ue.extime <= self.time}
         for bs, ues in self.connections.items():
             self.connections[bs] = ues - leaving
 
@@ -393,11 +401,11 @@ class MComCore(gymnasium.Env):
     def macro_datarates(self, datarates):
         """Compute aggregated UE data rates given all its connections."""
         ue_datarates = Counter()
-        for (bs, ue), datarate in datarates.items():
+        for (_bs, ue), datarate in datarates.items():
             ue_datarates.update({ue: datarate})
         return ue_datarates
 
-    def station_allocation(self, bs) -> Dict:
+    def station_allocation(self, bs) -> dict:
         """Schedule BS's resources (e.g. phy. res. blocks) to connected UEs."""
         conns = self.connections[bs]
 
@@ -406,15 +414,17 @@ class MComCore(gymnasium.Env):
 
         # UE's max. data rate achievable when BS schedules all resources to it
         max_allocation = [
-            self.channel.datarate(bs, ue, snr) for snr, ue in zip(snrs, conns)
+            self.channel.datarate(bs, ue, snr)
+            for snr, ue in zip(snrs, conns, strict=True)
         ]
 
         # BS shares resources among connected user equipments
         rates = self.scheduler.share(bs, max_allocation)
 
-        return {(bs, ue): rate for ue, rate in zip(conns, rates)}
+        # strict=True: a scheduler must return exactly one rate per connection
+        return {(bs, ue): rate for ue, rate in zip(conns, rates, strict=True)}
 
-    def station_utilities(self) -> Dict[BaseStation, UserEquipment]:
+    def station_utilities(self) -> dict[BaseStation, float]:
         """Compute average utility of UEs connected to the basestation."""
         # set utility of BS with no active connections (idle BS) to
         # (scaled) lower utility bound
@@ -430,7 +440,7 @@ class MComCore(gymnasium.Env):
 
         return util
 
-    def bs_isolines(self, drate: float) -> Dict:
+    def bs_isolines(self, drate: float) -> dict:
         """Isolines where UEs could still receive `drate` max. data rate."""
         isolines = {}
         config = self.default_config()["ue"]
@@ -442,11 +452,9 @@ class MComCore(gymnasium.Env):
 
         return isolines
 
-    def features(self) -> Dict[int, Dict[str, np.ndarray]]:
+    def features(self) -> dict[int, dict[str, np.ndarray]]:
         # fix ordering of BSs for observations
-        stations = sorted(
-            [bs for bs in self.stations.values()], key=lambda bs: bs.bs_id
-        )
+        stations = sorted(self.stations.values(), key=lambda bs: bs.bs_id)
 
         # compute average utility of each basestation's connections
         bs_utilities = self.station_utilities()
@@ -460,9 +468,9 @@ class MComCore(gymnasium.Env):
             onehot[[bs.bs_id for bs in connections]] = 1
 
             # (2) (normalized) SNR between UE to each BS
-            snrs = [self.channel.snr(bs, ue) for bs in stations]
-            maxsnr = max(snrs)
-            snrs = np.asarray([snr / maxsnr for snr in snrs], dtype=np.float32)
+            raw_snrs = [self.channel.snr(bs, ue) for bs in stations]
+            maxsnr = max(raw_snrs)
+            snrs = np.asarray([snr / maxsnr for snr in raw_snrs], dtype=np.float32)
 
             # (3) include normalized utility of UE
             utility = (
@@ -470,7 +478,7 @@ class MComCore(gymnasium.Env):
                 if ue in self.utilities
                 else self.utility.scale(self.utility.lower)
             )
-            utility = np.asarray([utility], dtype=np.float32)
+            utility_arr = np.asarray([utility], dtype=np.float32)
 
             # (4) receive broadcast of average BS utilities of BSs in range
             # if broadcast is not received, set utility to lower bound
@@ -479,7 +487,7 @@ class MComCore(gymnasium.Env):
                 bs: util if self.check_connectivity(bs, ue) else idle
                 for bs, util in bs_utilities.items()
             }
-            util_bcast = np.asarray(
+            util_bcast_arr = np.asarray(
                 [util_bcast[bs] for bs in stations], dtype=np.float32
             )
 
@@ -490,19 +498,19 @@ class MComCore(gymnasium.Env):
                     return len(self.connections[bs])
                 return 0.0
 
-            stations_connected = [num_connected(bs) for bs in stations]
+            connected_counts = [num_connected(bs) for bs in stations]
 
             # normalize by the max. number of connections
-            total = max(1, sum(stations_connected))
+            total = max(1, sum(connected_counts))
             stations_connected = np.asarray(
-                [num / total for num in stations_connected], dtype=np.float32
+                [num / total for num in connected_counts], dtype=np.float32
             )
 
             return {
                 "connections": onehot,
                 "snrs": snrs,
-                "utility": utility,
-                "bcast": util_bcast,
+                "utility": utility_arr,
+                "bcast": util_bcast_arr,
                 "stations_connected": stations_connected,
             }
 
@@ -532,12 +540,14 @@ class MComCore(gymnasium.Env):
 
         return obs
 
-    def render(self) -> None:
+    # gymnasium types Env.render() with an unbound RenderFrame TypeVar, which no
+    # concrete return type can satisfy; this env always renders an RGB array.
+    def render(self) -> np.ndarray | None:  # type: ignore[override]
         mode = self.render_mode
 
         # do not continue rendering once environment has been closed
         if self.closed:
-            return
+            return None
 
         # calculate isoline contours for BSs' connectivity range
         if self.conn_isolines is None:
@@ -591,23 +601,28 @@ class MComCore(gymnasium.Env):
 
         if mode == "rgb_array":
             # render RGB image for e.g. video recording
-            data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
-            # reshape image from 1d array to 2d array
-            return data.reshape(canvas.get_width_height()[::-1] + (3,))
+            # buffer_rgba() replaces tostring_rgb(), removed in matplotlib 3.10
+            rgba = np.asarray(canvas.buffer_rgba())
+            # callers expect (H, W, 3); drop the alpha channel
+            return rgba[:, :, :3]
 
         elif mode == "human":
-            # render RGBA image on pygame surface
-            data = canvas.buffer_rgba()
-            size = canvas.get_width_height()
+            # render RGBA image on pygame surface.
+            # NOTE: size the surface from the buffer itself. On a HiDPI screen
+            # (e.g. a Retina Mac) canvas.get_width_height() reports LOGICAL
+            # pixels while the Agg buffer holds PHYSICAL ones, and passing the
+            # logical size to frombuffer() raises "Buffer length does not equal
+            # format and resolution size".
+            data = np.asarray(canvas.buffer_rgba())
+            size = (data.shape[1], data.shape[0])
 
             # set up pygame window to display matplotlib figure
             if self.window is None:
                 pygame.init()
                 self.clock = pygame.time.Clock()
 
-                # set window size to figure's size in pixels
-                window_size = tuple(map(int, fig.get_size_inches() * fig.dpi))
-                self.window = pygame.display.set_mode(window_size)
+                # window matches the surface, for the same reason
+                self.window = pygame.display.set_mode(size)
 
                 # remove pygame icon from window; set icon to empty surface
                 pygame.display.set_icon(Surface((0, 0)))
@@ -618,10 +633,12 @@ class MComCore(gymnasium.Env):
             # clear surface
             self.window.fill("white")
 
-            # plot matplotlib's RGBA frame on the pygame surface
-            screen = pygame.display.get_surface()
-            plot = pygame.image.frombuffer(data, size, "RGBA")
-            screen.blit(plot, (0, 0))
+            # plot matplotlib's RGBA frame on the pygame surface.
+            # blit onto self.window rather than re-fetching via
+            # display.get_surface(), which is the same surface but typed
+            # Optional because it is None before a display mode is set.
+            plot = pygame.image.frombuffer(data.tobytes(), size, "RGBA")
+            self.window.blit(plot, (0, 0))
 
             # update the full display surface to the window
             pygame.display.flip()
@@ -634,8 +651,11 @@ class MComCore(gymnasium.Env):
         else:
             raise ValueError("Invalid rendering mode.")
 
+        # human mode draws to a window rather than returning a frame
+        return None
+
     def render_simulation(self, ax) -> None:
-        colormap = cm.get_cmap("RdYlGn")
+        colormap = colormaps["RdYlGn"]
         # define normalization for unscaled utilities
         unorm = plt.Normalize(self.utility.lower, self.utility.upper)
 

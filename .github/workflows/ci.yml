@@ -119,7 +119,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - run: |
           uv sync --locked
-          uv run mypy src
+          uv run mypy
 
   test:
     name: test

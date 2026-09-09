@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import gymnasium
 import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -36,22 +34,21 @@ class RLlibMAWrapper(MultiAgentEnv):
 
     def step(
         self, action_dict: MultiAgentDict
-    ) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
+    ) -> tuple[
+        MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict
+    ]:
         obs, rews, terminated, truncated, infos = self.env.step(action_dict)
 
         # UEs that are not active after `step()` are done (here: truncated)
         # NOTE: `truncateds` keys are keys of previous observation dictionary
-        inactive_ues = self.prev_step_ues - set([ue.ue_id for ue in self.env.active])
-        truncateds = {
-            ue_id: True if ue_id in inactive_ues else False
-            for ue_id in self.prev_step_ues
-        }
+        inactive_ues = self.prev_step_ues - {ue.ue_id for ue in self.env.active}
+        truncateds = {ue_id: ue_id in inactive_ues for ue_id in self.prev_step_ues}
         truncateds["__all__"] = truncated
         # Terminated is always False since there is no particular terminal end state.
-        assert (
-            not terminated
-        ), "There is no natural episode termination. terminated should be False."
-        terminateds = {ue_id: False for ue_id in self.prev_step_ues}
+        assert not terminated, (
+            "There is no natural episode termination. terminated should be False."
+        )
+        terminateds = dict.fromkeys(self.prev_step_ues, False)
         terminateds["__all__"] = False
 
         # update keys of previous observation dictionary

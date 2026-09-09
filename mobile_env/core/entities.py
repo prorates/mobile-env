@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from shapely.geometry import Point
 
 
@@ -7,7 +5,7 @@ class BaseStation:
     def __init__(
         self,
         bs_id: int,
-        pos: Tuple[float, float],
+        pos: tuple[float, float],
         bw: float,
         freq: float,
         tx: float,
@@ -47,10 +45,12 @@ class UserEquipment:
         self.noise = noise
         self.height = height
 
-        self.x: float = None
-        self.y: float = None
-        self.stime: int = None
-        self.extime: int = None
+        # position and the episode's arrival/departure times are assigned by
+        # the environment at reset(); a UE has none before its first episode
+        self.x: float | None = None
+        self.y: float | None = None
+        self.stime: int | None = None
+        self.extime: int | None = None
 
     @property
     def point(self):
