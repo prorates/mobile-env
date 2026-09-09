@@ -1,114 +1,95 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+<!-- Filling this in: CLAUDE-TEMPLATE-NOTES.md, beside this file. Delete the notes when done. -->
 
-## Commands
+Orients a Claude session at the start of every task in this repo, and carries only what is
+true for **every** task — depth lives in the skill named below and loads on demand. The other
+two owners are [`README.md`](README.md) (a human at a shell: install, run, configuration,
+what the tools do) and [`architecture.md`](architecture.md) (whoever is about to change the
+code: modules, boundaries, invariants); what was decided and why lives in
+[`openspec/ideas.md`](openspec/ideas.md). None of the three is restated here — read the one
+you need when you need it.
+Per-model advice, when the model changes: [`docs/MODEL-ADVICE.md`](docs/MODEL-ADVICE.md).
 
-Setup (editable install + test/lint deps):
+> **Just bootstrapped via `/alemax:new-project`?** Run `/opsx:propose` to spec out your first change.
+> *(This nudge can be removed once you've made your first commit beyond bootstrap.)*
 
-```bash
-pip install -e .
-pip install -r tests/requirements.txt
-```
+## 1. What this project is
 
-Test / lint (mirrors `.github/workflows/python-package.yml`):
+An open, minimalist Gymnasium environment for autonomous coordination in wireless mobile networks.
 
-```bash
-pytest                                                       # full suite
-pytest tests/test_env_stepping.py -k "small and central"     # single parametrized case
-pytest tests/test_central_envs.py::TestCentralEnvs::test_central_small
-pytest --nbmake examples/test.ipynb                          # notebooks are part of CI
-ruff check .                                                  # lint, exact CI invocation
-ruff format --check .                                         # format check, exact CI invocation
-pre-commit run --all-files                                   # ruff (lint + format), yaml checks
-```
+<two sentences: what it produces, for whom, and what it deliberately does not do>
 
-Docs (Sphinx, published to ReadTheDocs via `.readthedocs.yaml`):
+- **Stack:** python · **Run:** `<the one command — e.g. uv run mobile-env …>` ·
+  **Layout and invariants:** `architecture.md` — read it before adding a module, a stage, or a
+  dependency between packages; do not re-derive it from the tree, and do not summarise it here.
+- <domain doc, if any> — read it before <moment> *(e.g. `MODEL.md` before writing a record; delete this line if there is none)*
 
-```bash
-pip install -r docs/requirements.txt
-cd docs && make html          # output in docs/_build/html
-```
+## 2. Where the data lives — and who owns it
 
-`docs/requirements.txt` pins old versions (sphinx 3.5.4, myst-parser 0.15.2) and RTD builds on Python
-3.8, so a local build may need its own virtualenv. `docs/source/*.rst` are checked-in sphinx-apidoc
-stubs, not generated at build time — a new module needs a matching rst entry (note that
-`mobile_env.wrappers` is currently missing from `docs/source/mobile_env.rst`).
+Resolve every path from its variable. Never hard-code one, never infer it from a default, and
+if a variable is unset, **stop and ask** — do not guess a location and write there.
 
-ruff (lint + format) config is in `ruff.toml` (line-length 100, select `E`, `F`, `W`, `I`); there is
-no `pyproject.toml`. Both `ruff check` and `ruff format --check` run in CI and via pre-commit.
-Python >= 3.10; CI matrix is 3.10–3.13 on ubuntu/macos/windows (see `.github/workflows/python-package.yml`
-for the windows+3.13 exclusion).
+| tree | resolve it from | nature |
+| --- | --- | --- |
+| **code** | the session's repo root | private, on GitHub. **Sole owner** — refactor, rename, delete freely |
+| **data** | `<PROJECT>_<TIER>_DIR` — one variable per tier, catalogued in README § Configuration | private, local. **Sole owner** — <rebuild cost per tier> |
+| **shared** | `<SHARED_ROOT>/mobile-env/` | private, and **shared** — write **only** inside our own folder; outside it, report, never fix |
 
-## Architecture
+## 3. The skills this project built
 
-### Environment registration
+Everything this project does is driven through its own skills, each a thin wrapper around one
+command. The command is documented for humans in `README.md`; this is the routing, not a manual.
 
-`import mobile_env` → `mobile_env/scenarios/__init__.py` → `scenarios/registry.py`, which registers the
-cross-product of 3 scenarios (`small`/`medium`/`large`) × 2 handlers (`central`/`ma`) as
-`mobile-{scenario}-{handler}-v0`. Registration is a pure import side effect, which is why tests import
-`mobile_env` with `# noqa: F401`. A scenario subclass (`scenarios/*.py`) only fixes the map size, BS
-positions, and UE count; everything else comes from `MComCore`.
+| skill | what it is for |
+| --- | --- |
+| `/<prefix>:<action>` | <one line — the job it does, not how> |
 
-### Strategy-pattern configuration
+<pipeline order, if one exists: `/<prefix>:<first>` → `/<prefix>:<second>`, with the one reason a step must precede another>
 
-`MComCore.default_config()` returns a dict whose values for `arrival`, `channel`, `scheduler`,
-`movement`, `utility`, and `handler` are **classes**, each paired with a `<name>_params` dict passed to
-its constructor. User config is merged over the defaults with `deep_dict_merge`, then `seeding()`
-assigns each component `seed + n + 1` so components get distinct but deterministic RNGs.
+## 4. What this project produces for others
 
-Extending any simulation aspect therefore means: subclass the base class in `mobile_env/core/`
-(`Channel`, `Arrival`, `Movement`, `Scheduler`, `Utility`), then set both `config['<name>']` and
-`config['<name>_params']` — no source changes needed. See `docs/components.md`.
+<the contract it publishes — a corpus, a library, an image, a CRD — where it lands (`<SHARED_ROOT>/mobile-env/`, a tag, a registry), and the skill that produces it. Or: "nothing — a leaf.">
 
-Each component exposes `reset()` plus its own abstract methods; components that own RNG state honour
-`reset_rng_episode` (default `False`, i.e. randomness continues across episodes rather than repeating).
+## 5. What this project reads
 
-### Handlers are the Gym seam
+<the bundle, wiki, library or upstream it consumes, and the one document to read first — e.g. `<bundle>/wiki/vault_schema.md` before querying or writing that bundle; a generated index is a manifest, not a read path. Or: "only its own tree.">
 
-`MComCore` itself is agnostic to the RL interface. `MComCore.features()` computes a **superset** of
-per-UE features (`connections`, `snrs`, `utility`, `bcast`, `stations_connected`; lengths declared in
-`self.feature_sizes`). Each `Handler` (`mobile_env/handlers/`) declares a `features` class attribute
-selecting a subset, and owns `action_space`, `observation_space`, `action()` (reshaping into the
-`{ue_id: action}` dict the core expects), `observation()`, `reward()`, `check()`, and `info()`.
+## 6. Task routing — everything else
 
-- `MComCentralHandler`: `MultiDiscrete` action, one flat `Box` observation concatenated over all UEs,
-  reward = mean scaled utility.
-- `MComMAHandler`: `Dict` spaces keyed by `ue_id`, observations/rewards only for currently active UEs.
+| when you're working on… | invoke |
+| --- | --- |
+| <subsystem> | `/<prefix>:<action>` |
+| a delivery named in `.local/HANDOFF.md` | `/alemax:complete-update` |
 
-Adding an observation feature requires touching three places: `features()`, `feature_sizes`, and the
-handler's `features` list.
+## 7. How we code and spec here — with skills
 
-### `step()` semantics worth knowing
+- `/opsx:propose` → `/opsx:apply` → `/opsx:archive` for anything you would think about for
+  more than five minutes before coding. Specs in `openspec/specs/`, in-flight work in
+  `openspec/changes/`. This project is its own upstream: changes land here, by PR.
+- `/alemax:front-burner` at session start, `/alemax:back-burner` at session end.
+- `/alemax:feedback` the moment something bites — a gotcha goes to the skill of the thing that
+  bit, or there; **never into this file.**
+- A line stays here only while it is true for every task. When it stops being that, move it
+  down one level — to the owning skill, `architecture.md`, `README.md` or `openspec/ideas.md` —
+  do not delete it.
+- Secrets, the dev loop, CI: README § Secrets, § Development.
 
-- `terminated` is always `False`; `truncated` is `time_is_up`, i.e. `time >= min(EP_MAX_TIME, max_departure)`.
-- Data rates are recomputed twice per step: after applying actions, and again after UEs move.
-- `if not self.active and not self.time_is_up: return self.step({})` — a single `env.step()` call can
-  advance several simulation time steps when no UE is requesting service.
-- Utilities are scaled to `[-1, 1]` before rewards are computed; `render()` unscales them again.
+## Rules of engagement
 
-### Monitoring
+1. A path comes from its variable; unset means stop and ask.
+2. Write only inside what this repo owns (§ 2); outside it, report.
+3. Work lands by PR — never a direct push to `main`, even solo.
+4. No secret in any tracked file; Keychain holds the values, `.env.example` names the keys.
+5. Open questions go to `openspec/ideas.md`; gotchas to `/alemax:feedback`.
 
-`config['metrics']` holds `scalar_metrics` / `ue_metrics` / `bs_metrics` dicts of `callable(sim)`.
-`MComCore.__init__` injects the four scalar metrics that `render()` depends on. The `info` dict
-returned by `reset()`/`step()` is the handler's info merged with the monitor's latest values;
-`Monitor.load_results()` returns the full episode history as DataFrames.
+Standing constraints from the fleet (claude-meta specs `sibling-access-practice`, `project-environments`) — each names what enforces it:
 
-## Gotchas
-
-- `MComCentralHandler.check()` asserts a list comprehension (always truthy), so the "central env cannot
-  handle a changing number of UEs" constraint is **not** actually enforced. A custom `Arrival` with real
-  departures is only meaningful with the MA handler.
-- `RateFair` in `core/schedules.py` is broken as a drop-in replacement for the default `ResourceFair`:
-  `share()` returns a scalar instead of a per-UE list (`station_allocation` zips over it), and it
-  divides by zero for any connected UE whose data rate is `0.0` (what `Channel.datarate` returns below
-  the SNR threshold).
-- `README.md` and `docs/components.md` both show `from mobile_env.core.channel import Channel`; the
-  module is `mobile_env/core/channels.py`. The README snippet fails verbatim.
-- `mobile_env/wrappers/multi_agent.py` imports `ray.rllib` at module top; `ray[rllib]` is in
-  `tests/requirements.txt` and `tests/test_rllib.py` exercises `RLlibMAWrapper` (train, checkpoint,
-  reload, infer) in CI on Ray's "new API stack" (see `tests/requirements.txt` for what that requires
-  of the wrapper). `PettingZooWrapper` is a stub.
-- `gymnasium` is unpinned in `setup.py` as of 2.1.0 (the earlier `<1.0.0` pin was lifted), but
-  stable-baselines3 support constrains what actually works — see `tests/requirements.txt`.
-- The package version lives only in `setup.py`.
+- A session acts only inside this repo — its root, `.local/`, its worktrees, scratch and toolchain dirs; another repo's checkout or data is reached through that repo's own session, `/alemax:send-msg <drive> <repo>[@env]`, never read or written from here · enforced by: `.claude/hooks/scope-guard.py` (PreToolUse; exit 2 names the address)
+- Work in place in your own repo; a write into a sibling repo happens in a worktree of it that you created, never in its primary checkout · enforced by: scope-guard — a sibling's checkout is outside scope; `.claude/worktrees/**` and the `<repo>-claude-meta` delivery worktree are inside
+- `.local/env` names this clone's environment, `prod` or `dev`; absent, a clone under `Applications/` is `prod`, anything else `dev`; a `dev` session never writes under a prod clone or the data it declares · enforced by: scope-guard (write-shaped calls under `*/Applications/*` and declared `data:` roots refused while `dev`); `alemax_addr.py self` prints the label
+- Two clones of one repo differ only in `.claude/settings.local.json` and `.local/`; everything tracked is identical and reaches both by `git pull`, never by a second delivery · enforced by: none — `bin/reconcile-settings.py check` reports floor drift per clone; a clones-match check must carve those two paths out
+- `.local/scope-allow.txt` (one path per line, written by the operator) is the only way scope widens; never loosen a permission rule, a hook or the sandbox to get past a refusal · enforced by: scope-guard reads only that file; `.local/` is gitignored, so a widening never ships
+- A corpus, vault or wiki is entered through its schema file, never its `index.md` — an index is a manifest for a tool, not a read path and never an `@import`; and the startup set (this file, every `@import`, every `.claude/rules/*.md` with no `paths:`) stays inside the budget, because a file over 5,000 tokens comes back from a compaction as a path with no content · enforced by: `bin/claude-md-check.py` (pre-commit; refuses the import, reports the budget)
+- A prod↔dev channel (`tracking-NN.md`, an inbox) is this project's own file; claude-meta ships none and never writes into it; a brief carries the next action and a path, not the work · enforced by: none — `alemax_addr.py queue` writes only the sender's own `.local/outbox/`
+- Data trees are declared in `data.yaml` (`uv run --script bin/data-check.py`); a `dev` session never writes a `prod` one · enforced by: `bin/data-check.py` (pre-commit, staged) · `.claude/hooks/scope-guard.py` (PreToolUse while `dev`)

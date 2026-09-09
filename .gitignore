@@ -132,3 +132,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# claude-meta: session-local state, never tracked
+.local/
+.claude/settings.local.json
+
+# ...but .python-version is tracked here: it pins the interpreter uv uses for
+# development. The entry above comes from the stock template, for pyenv.
+!.python-version
