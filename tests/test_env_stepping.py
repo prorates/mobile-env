@@ -18,10 +18,10 @@ def test_env_stepping(scenario: str, handler: str):
     env_name: str = f"mobile-{scenario}-{handler}-v0"
     # create a small mobile environment for a single, centralized control agent
     env = gymnasium.make(env_name)
-    obs, info = env.reset()
+    _obs, _info = env.reset()
     done = False
 
     while not done:
         random_action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(random_action)
+        _obs, _reward, terminated, truncated, _info = env.step(random_action)
         done = terminated or truncated

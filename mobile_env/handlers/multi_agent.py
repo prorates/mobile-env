@@ -1,14 +1,13 @@
-from typing import Dict
+from typing import ClassVar
 
 import gymnasium
 import numpy as np
 
-from mobile_env.core.base import MComCore
 from mobile_env.handlers.handler import Handler
 
 
 class MComMAHandler(Handler):
-    features = [
+    features: ClassVar[list[str]] = [
         "connections",
         "snrs",
         "utility",
@@ -21,23 +20,25 @@ class MComMAHandler(Handler):
         return sum(env.feature_sizes[ftr] for ftr in cls.features)
 
     @classmethod
-    def action_space(cls, env: MComCore) -> gymnasium.spaces.Dict:
+    def action_space(cls, env) -> gymnasium.spaces.Dict:
         return gymnasium.spaces.Dict(
             {ue.ue_id: gymnasium.spaces.Discrete(env.NUM_STATIONS + 1) for ue in env.users.values()}
         )
 
     @classmethod
-    def observation_space(cls, env: MComCore) -> gymnasium.spaces.Dict:
+    def observation_space(cls, env) -> gymnasium.spaces.Dict:
         size = cls.ue_obs_size(env)
         space = {
             ue_id: gymnasium.spaces.Box(low=-1, high=1, shape=(size,), dtype=np.float32)
             for ue_id in env.users
         }
 
-        return gymnasium.spaces.Dict(space)
+        # gymnasium's stubs type Dict's keys as str; UE ids are ints, which
+        # the runtime accepts and the rest of the package relies on.
+        return gymnasium.spaces.Dict(space)  # type: ignore[arg-type]
 
     @classmethod
-    def reward(cls, env: MComCore):
+    def reward(cls, env):
         """UE's reward is their utility and the avg. utility of nearby BSs."""
         # compute average utility of UEs for each BS
         # set to lower bound if no UEs are connected
@@ -62,11 +63,11 @@ class MComMAHandler(Handler):
         return rewards
 
     @classmethod
-    def observation(cls, env: MComCore) -> Dict[int, np.ndarray]:
+    def observation(cls, env) -> dict[int, np.ndarray]:
         """Select features for MA setting & flatten each UE's features."""
 
         # get features for currently active UEs
-        active = set([ue.ue_id for ue in env.active if not env.time_is_up])
+        active = {ue.ue_id for ue in env.active if not env.time_is_up}
         features = env.features()
         features = {ue_id: obs for ue_id, obs in features.items() if ue_id in active}
 
@@ -76,10 +77,9 @@ class MComMAHandler(Handler):
         }
 
         # flatten each UE's Dict observation to vector representation
-        obs = {ue_id: np.concatenate([o for o in ue_obs]) for ue_id, ue_obs in obs.items()}
-        return obs
+        return {ue_id: np.concatenate(ue_obs) for ue_id, ue_obs in obs.items()}
 
     @classmethod
-    def action(cls, env: MComCore, action: Dict[int, int]):
+    def action(cls, env, action: dict[int, int]):
         """Base environment by default expects action dictionary."""
         return action

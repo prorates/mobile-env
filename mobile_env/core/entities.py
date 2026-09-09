@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from shapely.geometry import Point
 
 
@@ -7,7 +5,7 @@ class BaseStation:
     def __init__(
         self,
         bs_id: int,
-        pos: Tuple[float, float],
+        pos: tuple[float, float],
         bw: float,
         freq: float,
         tx: float,
@@ -47,6 +45,11 @@ class UserEquipment:
         self.noise = noise
         self.height = height
 
+        # Declared, not assigned: MComCore.reset() sets all four for every UE
+        # before any of them is read, so they are never legitimately absent.
+        # Annotating them Optional instead would push a `| None` guard into
+        # every comparison in the step loop without making anything safer --
+        # reading one before reset() is a bug either way.
         self.x: float
         self.y: float
         self.stime: int

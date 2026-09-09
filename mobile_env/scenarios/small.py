@@ -4,7 +4,8 @@ from mobile_env.core.util import deep_dict_merge
 
 
 class MComSmall(MComCore):
-    def __init__(self, config={}, render_mode=None):
+    def __init__(self, config=None, render_mode=None):
+        config = {} if config is None else config
         # set unspecified parameters to default configuration
         config = deep_dict_merge(self.default_config(), config)
 

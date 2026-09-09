@@ -12,15 +12,21 @@ RLModule is fetched via `Algorithm.get_module()` and queried directly with `forw
 import gymnasium
 import numpy as np
 import pytest
-import ray
-import torch
-from ray.rllib.algorithms.algorithm import Algorithm
-from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.core.columns import Columns
-from ray.tune.registry import register_env
 
-import mobile_env  # noqa: F401
-from mobile_env.wrappers.multi_agent import RLlibMAWrapper
+# ray ships no wheel for every interpreter/platform this project supports (notably
+# Python 3.14, and Windows on the newest versions), and it is an optional extra
+# rather than a test dependency. Skip the module rather than failing collection --
+# this must precede importing the wrapper, which imports ray at module scope too.
+ray = pytest.importorskip("ray")
+torch = pytest.importorskip("torch")
+
+from ray.rllib.algorithms.algorithm import Algorithm  # noqa: E402
+from ray.rllib.algorithms.ppo import PPOConfig  # noqa: E402
+from ray.rllib.core.columns import Columns  # noqa: E402
+from ray.tune.registry import register_env  # noqa: E402
+
+import mobile_env  # noqa: E402, F401
+from mobile_env.wrappers.multi_agent import RLlibMAWrapper  # noqa: E402
 
 ENV_NAME = "mobile-small-ma-v0"
 

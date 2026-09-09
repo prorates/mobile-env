@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 import gymnasium
 import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -24,6 +22,10 @@ class RLlibMAWrapper(MultiAgentEnv):
         # RLlib's MultiAgentEnv expects per-agent (i.e., per-UE) action/observation spaces,
         # keyed by agent ID. `MComMAHandler` already exposes exactly that (a `gymnasium.spaces.Dict`
         # keyed by `ue_id`), so reuse it as-is instead of re-deriving per-UE spaces here.
+        # MComMAHandler builds both as gymnasium.spaces.Dict; the base Env
+        # attribute is only typed Space, which has no `.spaces`.
+        assert isinstance(self.env.action_space, gymnasium.spaces.Dict)
+        assert isinstance(self.env.observation_space, gymnasium.spaces.Dict)
         self.action_spaces = dict(self.env.action_space.spaces)
         self.observation_spaces = dict(self.env.observation_space.spaces)
 
@@ -36,7 +38,7 @@ class RLlibMAWrapper(MultiAgentEnv):
 
         # track UE IDs of last observation's dictionary, i.e.,
         # what UEs were active in the previous step
-        self.prev_step_ues: Optional[set[int]] = None
+        self.prev_step_ues: set[int] | None = None
 
     def reset(self, *, seed=None, options=None) -> MultiAgentDict:
         obs, info = self.env.reset(seed=seed, options=options)
@@ -46,7 +48,7 @@ class RLlibMAWrapper(MultiAgentEnv):
 
     def step(
         self, action_dict: MultiAgentDict
-    ) -> Tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
+    ) -> tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
         obs, rews, terminated, truncated, infos = self.env.step(action_dict)
 
         # UEs that are not active after `step()` are done (here: truncated). When the whole
@@ -55,17 +57,15 @@ class RLlibMAWrapper(MultiAgentEnv):
         # further step for it to act in.
         # NOTE: `truncateds` keys are keys of previous observation dictionary
         assert self.prev_step_ues is not None
-        active_ue_ids = set(ue.ue_id for ue in self.env.active)
+        active_ue_ids = {ue.ue_id for ue in self.env.active}
         inactive_ues = set(self.prev_step_ues) if truncated else self.prev_step_ues - active_ue_ids
-        truncateds: MultiAgentDict = {
-            ue_id: True if ue_id in inactive_ues else False for ue_id in self.prev_step_ues
-        }
+        truncateds: MultiAgentDict = {ue_id: ue_id in inactive_ues for ue_id in self.prev_step_ues}
         truncateds["__all__"] = truncated
         # Terminated is always False since there is no particular terminal end state.
         assert not terminated, (
             "There is no natural episode termination. terminated should be False."
         )
-        terminateds: MultiAgentDict = {ue_id: False for ue_id in self.prev_step_ues}
+        terminateds: MultiAgentDict = dict.fromkeys(self.prev_step_ues, False)
         terminateds["__all__"] = False
 
         # RLlib requires a final ("truncation") observation and reward for any UE that
@@ -74,10 +74,11 @@ class RLlibMAWrapper(MultiAgentEnv):
         # still active *and* the episode isn't over, so both UEs departing this step and
         # (on the last step) every other acting UE need synthetic final values here.
         for ue_id in set(action_dict) - set(obs.keys()):
-            obs[ue_id] = np.zeros(
-                self.observation_spaces[ue_id].shape,
-                dtype=self.observation_spaces[ue_id].dtype,
-            )
+            # always a Box (see MComMAHandler.observation_space); only Box
+            # guarantees the concrete shape and dtype np.zeros needs
+            space = self.observation_spaces[ue_id]
+            assert isinstance(space, gymnasium.spaces.Box)
+            obs[ue_id] = np.zeros(space.shape, dtype=space.dtype)
             rews.setdefault(ue_id, 0.0)
 
         # update the set of UEs considered active as of this step
@@ -90,7 +91,7 @@ class RLlibMAWrapper(MultiAgentEnv):
 
         return obs, rews, terminateds, truncateds, infos
 
-    def render(self) -> None:
+    def render(self) -> np.ndarray | None:
         return self.env.render()
 
 

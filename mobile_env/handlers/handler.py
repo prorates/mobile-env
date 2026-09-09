@@ -1,5 +1,4 @@
 import abc
-from typing import Dict
 
 from gymnasium.spaces.space import Space
 
@@ -24,7 +23,7 @@ class Handler(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def action(cls, env, action) -> Dict[int, int]:
+    def action(cls, env, action) -> dict[int, int]:
         """Transform passed action(s) to dict shape expected by simulation."""
 
     @classmethod
@@ -37,9 +36,13 @@ class Handler(abc.ABC):
     def reward(cls, env):
         """Computes rewards for agent."""
 
-    @classmethod
+    @classmethod  # noqa: B027
     def check(cls, env):
-        """Check if handler is applicable to simulation configuration."""
+        """Check if handler is applicable to simulation configuration.
+
+        Deliberately concrete and empty: a handler with no applicability
+        constraint inherits the no-op rather than restating it.
+        """
 
     @classmethod
     def info(cls, env):
