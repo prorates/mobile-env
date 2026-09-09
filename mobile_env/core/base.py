@@ -7,7 +7,7 @@ import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
 import pygame
-from matplotlib import cm
+from matplotlib import colormaps
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from pygame import Surface
 
@@ -25,7 +25,9 @@ from mobile_env.handlers.central import MComCentralHandler
 
 class MComCore(gymnasium.Env):
     NOOP_ACTION = 0
-    metadata = {"render_modes": ["rgb_array", "human"]}
+    # one simulation step per frame; 4 fps is slow enough to follow UEs
+    # moving and connections being made and released
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 4}
 
     def __init__(self, stations, users, config={}, render_mode=None):
         super().__init__()
@@ -591,23 +593,28 @@ class MComCore(gymnasium.Env):
 
         if mode == "rgb_array":
             # render RGB image for e.g. video recording
-            data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
-            # reshape image from 1d array to 2d array
-            return data.reshape(canvas.get_width_height()[::-1] + (3,))
+            # buffer_rgba() replaces tostring_rgb(), removed in matplotlib 3.10
+            rgba = np.asarray(canvas.buffer_rgba())
+            # callers expect (H, W, 3); drop the alpha channel
+            return rgba[:, :, :3]
 
         elif mode == "human":
-            # render RGBA image on pygame surface
-            data = canvas.buffer_rgba()
-            size = canvas.get_width_height()
+            # render RGBA image on pygame surface.
+            # NOTE: size the surface from the buffer itself. On a HiDPI screen
+            # (e.g. a Retina Mac) canvas.get_width_height() reports LOGICAL
+            # pixels while the Agg buffer holds PHYSICAL ones, and passing the
+            # logical size to frombuffer() raises "Buffer length does not equal
+            # format and resolution size".
+            data = np.asarray(canvas.buffer_rgba())
+            size = (data.shape[1], data.shape[0])
 
             # set up pygame window to display matplotlib figure
             if self.window is None:
                 pygame.init()
                 self.clock = pygame.time.Clock()
 
-                # set window size to figure's size in pixels
-                window_size = tuple(map(int, fig.get_size_inches() * fig.dpi))
-                self.window = pygame.display.set_mode(window_size)
+                # window matches the surface, for the same reason
+                self.window = pygame.display.set_mode(size)
 
                 # remove pygame icon from window; set icon to empty surface
                 pygame.display.set_icon(Surface((0, 0)))
@@ -635,7 +642,7 @@ class MComCore(gymnasium.Env):
             raise ValueError("Invalid rendering mode.")
 
     def render_simulation(self, ax) -> None:
-        colormap = cm.get_cmap("RdYlGn")
+        colormap = colormaps["RdYlGn"]
         # define normalization for unscaled utilities
         unorm = plt.Normalize(self.utility.lower, self.utility.upper)
 
