@@ -1,8 +1,9 @@
 [![CI](https://github.com/stefanbschneider/mobile-env/actions/workflows/python-package.yml/badge.svg)](https://github.com/stefanbschneider/mobile-env/actions/workflows/python-package.yml)
-[![PyPI](https://github.com/stefanbschneider/mobile-env/actions/workflows/python-publish.yml/badge.svg)](https://github.com/stefanbschneider/mobile-env/actions/workflows/python-publish.yml)
+[![PyPI](https://img.shields.io/pypi/v/mobile-env)](https://pypi.org/project/mobile-env/)
 [![Documentation](https://readthedocs.org/projects/mobile-env/badge/?version=latest)](https://mobile-env.readthedocs.io/en/latest/?badge=latest)
-[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stefanbschneider/mobile-env/blob/master/examples/demo.ipynb)
+[![License: MIT](https://img.shields.io/github/license/stefanbschneider/mobile-env)](https://github.com/stefanbschneider/mobile-env/blob/main/LICENSE)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stefanbschneider/mobile-env/blob/main/examples/demo.ipynb)
 
 
 # mobile-env: An Open Environment for Autonomous Coordination in Mobile Networks
@@ -22,15 +23,15 @@ However, BSs multiplex resources among connected UEs (e.g. schedule physical res
 To maximize QoE globally, the policy must recognize that (1) the data rate of any connection is governed by the channel (e.g. SNR) between UE and BS and (2) QoE of single UEs not necessarily grows linearly with increasing data rate.
 
 <p align="center">
-    <img src="https://user-images.githubusercontent.com/36734964/139288123-7732eff2-24d4-4c25-87fd-ac906f261c93.gif" width="65%"/>
+    <img src="https://raw.githubusercontent.com/stefanbschneider/mobile-env/main/docs/images/mobile-env.gif" width="65%"/>
     <br>
-    <sup><a href="https://thenounproject.com/search/?q=base+station&i=1286474" target="_blank">Base station icon</a> by Clea Doltz from the Noun Project</sup>
+    <sup>A multi-agent PPO policy (trained with Ray RLlib; see <code>docs/scripts/</code>) coordinating cell selection on the medium scenario. <a href="https://thenounproject.com/search/?q=base+station&i=1286474" target="_blank">Base station icon</a> by Clea Doltz from the Noun Project</sup>
 </p>
 
 **Try mobile-env:**
 
-- Part I: Customizing mobile-env and single-agent RL with stable-baselines3: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stefanbschneider/mobile-env/blob/master/examples/demo.ipynb)
-- Part II: Multi-agent RL on mobile-env with Ray RLlib: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stefanbschneider/mobile-env/blob/master/examples/rllib.ipynb)
+- Part I: Customizing mobile-env and single-agent RL with stable-baselines3: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stefanbschneider/mobile-env/blob/main/examples/demo.ipynb)
+- Part II: Multi-agent RL on mobile-env with Ray RLlib: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stefanbschneider/mobile-env/blob/main/examples/rllib.ipynb)
 
 Documentation and API: [ReadTheDocs](https://mobile-env.readthedocs.io/en/latest/)
 
@@ -74,11 +75,17 @@ depends on. It provides the same `pygame` module, so if you already have the ori
 
 ### From Source (Development)
 
-Alternatively, for development, you can clone `mobile-env` from GitHub and install it from
-source. After cloning, install in "editable" mode (-e):
+Alternatively, for development, you can clone `mobile-env` from GitHub and install it from source.
+We recommend [`uv`](https://docs.astral.sh/uv/) for setting up a development environment
+(see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/)); plain
+`pip` works the same way, just drop the `uv` prefix.
+
+After cloning, create a virtual environment and install `mobile-env` in "editable" mode (-e):
 
 ```bash
-pip install -e .
+uv venv
+source .venv/bin/activate
+uv pip install -e .
 ```
 
 Optional extras cover the other workflows:
@@ -151,6 +158,14 @@ env = gymnasium.make('mobile-small-central-v0', config=config)
 
 If you are using `movile-env`, please let us know and we are happy to link to your project from the readme. You can also open a pull request yourself.
 
+* [Mir Riyanul Islam, Shaibal Barua, Mobyen Uddin Ahmed, Shahina Begum, "Explaining Agents' Interactions Through their Causal Behavior and Counterfactuals", 2026](https://doi.org/10.1007/978-3-032-31141-2_20)
+* [Zeyu Fang, Shu Hong, Huu Trung Thieu, Nakjung Choi, Tian Lan, "ZODIAC: Zero-shot Offline Diffusion for Inferring Multi-xApps Conflicts in Open Radio Access Networks", 2026](https://arxiv.org/abs/2604.19610)
+* [Nicolas Helson, Pegah Alizadeh, Anastasios Giovanidis, "Selecting Offline Reinforcement Learning Algorithms for Stochastic Network Control", 2026](https://arxiv.org/abs/2603.03932)
+* [Weijun Huang, Chen-Khong Tham, "Transformer-based Reinforcement Learning for Base Station Selection", 2025](https://doi.org/10.1109/GLOBECOM59602.2025.11432277)
+* [Boikobo Nokane, Bassey Isong, Moshe T. Masonta, "Evaluating Reinforcement Learning-Based Xapps for User-Centric Resource Allocation in Open RAN", 2025](https://doi.org/10.1109/IMITEC67386.2025.11410449)
+* [Konrad Nowosadko, Franco Ruggeri, Ahmad Terra, "Self-Explaining Reinforcement Learning for Mobile Network Resource Allocation", 2025](https://arxiv.org/abs/2509.14925)
+* [Ziyang Zhang, Yiming Liu, Zheng Jiang, Bei Yang, Jianchi Zhu, "An Intelligent Energy-Efficient Handover Scheme Based on CoMP for Heterogeneous Network", 2024](https://doi.org/10.1109/LCOMM.2024.3375283)
+* [Harun Ur Rashid, Seong Ho Jeong, "Resource Allocation in Multi-Cell Networks: A Deep Reinforcement Learning Approach", 2023](https://doi.org/10.1109/ICTC58733.2023.10393199)
 * [Mohammadreza Kouchaki and Vuk Marojevic, "Actor-Critic Network for O-RAN Resource Allocation: xApp Design, Deployment, and Analysis", 2022](https://arxiv.org/abs/2210.04604)
 * [Stefan Schneider, Ramin Khalili, Artur Hecker, Holger Karl, "DeepCoMP: Self-Learning Dynamic Multi-Cell Selection for Coordinated Multipoint (CoMP)", 2021](https://github.com/CN-UPB/DeepCoMP)
 

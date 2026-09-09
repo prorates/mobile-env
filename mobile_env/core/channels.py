@@ -128,14 +128,8 @@ class OkumuraHata(Channel):
     def power_loss(self, bs: BaseStation, ue: UserEquipment):
         distance = bs.point.distance(ue.point)
 
-        ch = (
-            0.8
-            + (1.1 * np.log10(bs.frequency) - 0.7) * ue.height
-            - 1.56 * np.log10(bs.frequency)
-        )
-        tmp_1 = (
-            69.55 - ch + 26.16 * np.log10(bs.frequency) - 13.82 * np.log10(bs.height)
-        )
+        ch = 0.8 + (1.1 * np.log10(bs.frequency) - 0.7) * ue.height - 1.56 * np.log10(bs.frequency)
+        tmp_1 = 69.55 - ch + 26.16 * np.log10(bs.frequency) - 13.82 * np.log10(bs.height)
         tmp_2 = 44.9 - 6.55 * np.log10(bs.height)
 
         # add small epsilon to avoid log(0) if distance = 0

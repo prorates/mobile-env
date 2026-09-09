@@ -22,10 +22,7 @@ class MComMAHandler(Handler):
     @classmethod
     def action_space(cls, env) -> gymnasium.spaces.Dict:
         return gymnasium.spaces.Dict(
-            {
-                ue.ue_id: gymnasium.spaces.Discrete(env.NUM_STATIONS + 1)
-                for ue in env.users.values()
-            }
+            {ue.ue_id: gymnasium.spaces.Discrete(env.NUM_STATIONS + 1) for ue in env.users.values()}
         )
 
     @classmethod
@@ -76,8 +73,7 @@ class MComMAHandler(Handler):
 
         # select observations for multi-agent setting from base feature set
         obs = {
-            ue_id: [obs_dict[key] for key in cls.features]
-            for ue_id, obs_dict in features.items()
+            ue_id: [obs_dict[key] for key in cls.features] for ue_id, obs_dict in features.items()
         }
 
         # flatten each UE's Dict observation to vector representation

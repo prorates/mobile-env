@@ -3,56 +3,87 @@ import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.rllib.utils.typing import MultiAgentDict
 
+from mobile_env.core.base import MComCore
+
 
 class RLlibMAWrapper(MultiAgentEnv):
-    def __init__(self, env):
-        # class wrapps environment object
-        self.env = env
+    def __init__(self, env: gymnasium.Env):
+        # Keep a reference to the mobile-env base environment, which is wrapped by this class.
+        # Remove any gymnasium wrappers first if needed.
+        if isinstance(env, MComCore):
+            self.env: MComCore = env
+        else:
+            assert isinstance(env.unwrapped, MComCore), "The unwrapped env should be a mobile-env."
+            self.env = env.unwrapped
 
-        # set number of overall controllable actors
-        self.num_agents = len(self.env.users)
         # set max. number of steps for RLlib trainer
         self.max_episode_steps = self.env.EP_MAX_TIME
 
-        # override action and observation space defined for wrapped environment
-        # RLlib expects the action and observation space
-        # to be defined per actor, i.e, per UE
-        self.action_space = gymnasium.spaces.Discrete(self.env.NUM_STATIONS + 1)
-        size = self.env.handler.ue_obs_size(self.env)
-        self.observation_space = gymnasium.spaces.Box(
-            low=-1, high=1, shape=(size,), dtype=np.float32
-        )
+        # RLlib's MultiAgentEnv expects per-agent (i.e., per-UE) action/observation spaces,
+        # keyed by agent ID. `MComMAHandler` already exposes exactly that (a `gymnasium.spaces.Dict`
+        # keyed by `ue_id`), so reuse it as-is instead of re-deriving per-UE spaces here.
+        # MComMAHandler builds both as gymnasium.spaces.Dict; the base Env
+        # attribute is only typed Space, which has no `.spaces`.
+        assert isinstance(self.env.action_space, gymnasium.spaces.Dict)
+        assert isinstance(self.env.observation_space, gymnasium.spaces.Dict)
+        self.action_spaces = dict(self.env.action_space.spaces)
+        self.observation_spaces = dict(self.env.observation_space.spaces)
+
+        # all UEs that may ever appear in the environment (fixed for the lifetime of the env,
+        # even though not all of them are necessarily active at any given time)
+        self.possible_agents = list(self.env.users.keys())
+        self.agents = self.possible_agents.copy()
+
+        super().__init__()
 
         # track UE IDs of last observation's dictionary, i.e.,
         # what UEs were active in the previous step
-        self.prev_step_ues = None
+        self.prev_step_ues: set[int] | None = None
 
     def reset(self, *, seed=None, options=None) -> MultiAgentDict:
         obs, info = self.env.reset(seed=seed, options=options)
         self.prev_step_ues = set(obs.keys())
+        self.agents = list(obs.keys())
         return obs, info
 
     def step(
         self, action_dict: MultiAgentDict
-    ) -> tuple[
-        MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict
-    ]:
+    ) -> tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
         obs, rews, terminated, truncated, infos = self.env.step(action_dict)
 
-        # UEs that are not active after `step()` are done (here: truncated)
+        # UEs that are not active after `step()` are done (here: truncated). When the whole
+        # episode ends (`truncated`), every UE that was active going into this step is
+        # considered done too, even if `self.env.active` (still) lists it -- there is no
+        # further step for it to act in.
         # NOTE: `truncateds` keys are keys of previous observation dictionary
-        inactive_ues = self.prev_step_ues - {ue.ue_id for ue in self.env.active}
-        truncateds = {ue_id: ue_id in inactive_ues for ue_id in self.prev_step_ues}
+        assert self.prev_step_ues is not None
+        active_ue_ids = {ue.ue_id for ue in self.env.active}
+        inactive_ues = set(self.prev_step_ues) if truncated else self.prev_step_ues - active_ue_ids
+        truncateds: MultiAgentDict = {ue_id: ue_id in inactive_ues for ue_id in self.prev_step_ues}
         truncateds["__all__"] = truncated
         # Terminated is always False since there is no particular terminal end state.
         assert not terminated, (
             "There is no natural episode termination. terminated should be False."
         )
-        terminateds = dict.fromkeys(self.prev_step_ues, False)
+        terminateds: MultiAgentDict = dict.fromkeys(self.prev_step_ues, False)
         terminateds["__all__"] = False
 
-        # update keys of previous observation dictionary
-        self.prev_step_ues = set(obs.keys())
+        # RLlib requires a final ("truncation") observation and reward for any UE that
+        # acted this step and is now truncated (e.g., for value-function bootstrapping).
+        # `MComMAHandler.observation()`/`reward()` only report values for UEs that are
+        # still active *and* the episode isn't over, so both UEs departing this step and
+        # (on the last step) every other acting UE need synthetic final values here.
+        for ue_id in set(action_dict) - set(obs.keys()):
+            # always a Box (see MComMAHandler.observation_space); only Box
+            # guarantees the concrete shape and dtype np.zeros needs
+            space = self.observation_spaces[ue_id]
+            assert isinstance(space, gymnasium.spaces.Box)
+            obs[ue_id] = np.zeros(space.shape, dtype=space.dtype)
+            rews.setdefault(ue_id, 0.0)
+
+        # update the set of UEs considered active as of this step
+        self.prev_step_ues = active_ue_ids
+        self.agents = list(active_ue_ids)
 
         # RLlib expects the keys of infos to be a subset of obs + __common__
         # Put all infos under __common__
@@ -60,7 +91,7 @@ class RLlibMAWrapper(MultiAgentEnv):
 
         return obs, rews, terminateds, truncateds, infos
 
-    def render(self) -> None:
+    def render(self) -> np.ndarray | None:
         return self.env.render()
 
 

@@ -9,6 +9,7 @@ import numpy as np
 import pygame
 from matplotlib import colormaps
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
 from pygame import Surface
 
 from mobile_env.core import metrics
@@ -21,19 +22,27 @@ from mobile_env.core.schedules import ResourceFair
 from mobile_env.core.util import BS_SYMBOL, deep_dict_merge
 from mobile_env.core.utilities import BoundedLogUtility
 from mobile_env.handlers.central import MComCentralHandler
+from mobile_env.handlers.handler import Handler
 
 
 class MComCore(gymnasium.Env):
     NOOP_ACTION = 0
-    # one simulation step per frame; 4 fps is slow enough to follow UEs
-    # moving and connections being made and released
+    # rendering redraws the whole matplotlib figure from scratch (~100-450ms
+    # depending on scenario size), so this is a realistic cap rather than an
+    # arbitrary "smooth video" number; see clock.tick() in render() below
     # not ClassVar: gymnasium.Env declares metadata as an instance variable
     metadata: dict[str, Any] = {  # noqa: RUF012
         "render_modes": ["rgb_array", "human"],
-        "render_fps": 4,
+        "render_fps": 10,
     }
 
-    def __init__(self, stations, users, config=None, render_mode=None):
+    def __init__(
+        self,
+        stations: list[BaseStation],
+        users: list[UserEquipment],
+        config=None,
+        render_mode=None,
+    ):
         super().__init__()
 
         config = {} if config is None else config
@@ -58,7 +67,7 @@ class MComCore(gymnasium.Env):
 
         # define parameters that track the simulation's progress
         self.EP_MAX_TIME = config["EP_MAX_TIME"]
-        self.time = None
+        self.time: float = 0.0
         self.closed = False
 
         # defines the simulation's overall basestations and UEs
@@ -78,26 +87,27 @@ class MComCore(gymnasium.Env):
 
         # set object that handles calls to action(), reward() & observation()
         # set action & observation space according to handler
-        self.handler = config["handler"]
+        self.handler: Handler = config["handler"]
         self.action_space = self.handler.action_space(self)
         self.observation_space = self.handler.observation_space(self)
 
         # stores what UEs are currently active, i.e., request service
-        self.active: list[UserEquipment] = None
+        self.active: list[UserEquipment] = []
         # stores what downlink connections between BSs and UEs are active
-        self.connections: dict[BaseStation, set[UserEquipment]] = None
+        self.connections: dict[BaseStation, set[UserEquipment]] = {}
         # stores datarate of downlink connections between UEs and BSs
-        self.datarates: dict[tuple[BaseStation, UserEquipment], float] = None
+        self.datarates: dict[tuple[BaseStation, UserEquipment], float] = {}
         # stores each UE's (scaled) utility
-        self.utilities: dict[UserEquipment, float] = None
+        self.utilities: dict[UserEquipment, float] = {}
         # define RNG (as of now: unused)
         self.rng = None
 
         # parameters for pygame visualization
-        self.window = None
-        self.clock = None
-        self.conn_isolines = None
-        self.mb_isolines = None
+        self.window: Surface | None = None
+        self.clock: pygame.time.Clock | None = None
+        # computed once on first render and cached; expensive, so stay lazy
+        self.conn_isolines: dict | None = None
+        self.mb_isolines: dict | None = None
 
         # add metrics required for visualization & set up monitor
         config["metrics"]["scalar_metrics"].update(
@@ -219,10 +229,8 @@ class MComCore(gymnasium.Env):
             self.rng = np.random.default_rng(self.seed)
 
         # extra options currently not supported
-        if options is not None:
-            raise NotImplementedError(
-                "Passing extra options on env.reset() is not supported."
-            )
+        if options is not None and options != {}:
+            raise NotImplementedError("Passing extra options on env.reset() is not supported.")
 
         # reset state kept by arrival pattern, channel, scheduler, etc.
         self.arrival.reset()
@@ -326,14 +334,10 @@ class MComCore(gymnasium.Env):
         self.macro = self.macro_datarates(self.datarates)
 
         # compute utilities from UEs' data rates & log its mean value
-        self.utilities = {
-            ue: self.utility.utility(self.macro[ue]) for ue in self.active
-        }
+        self.utilities = {ue: self.utility.utility(self.macro[ue]) for ue in self.active}
 
         # scale utilities to range [-1, 1] before computing rewards
-        self.utilities = {
-            ue: self.utility.scale(util) for ue, util in self.utilities.items()
-        }
+        self.utilities = {ue: self.utility.scale(util) for ue, util in self.utilities.items()}
 
         # compute rewards from utility for each UE
         # method is defined by handler according to strategy pattern
@@ -353,11 +357,7 @@ class MComCore(gymnasium.Env):
 
         # update list of active UEs & add those that begin to request service
         self.active = sorted(
-            [
-                ue
-                for ue in self.users.values()
-                if ue.extime > self.time and ue.stime <= self.time
-            ],
+            [ue for ue in self.users.values() if ue.extime > self.time and ue.stime <= self.time],
             key=lambda ue: ue.ue_id,
         )
 
@@ -414,8 +414,7 @@ class MComCore(gymnasium.Env):
 
         # UE's max. data rate achievable when BS schedules all resources to it
         max_allocation = [
-            self.channel.datarate(bs, ue, snr)
-            for snr, ue in zip(snrs, conns, strict=True)
+            self.channel.datarate(bs, ue, snr) for snr, ue in zip(snrs, conns, strict=True)
         ]
 
         # BS shares resources among connected user equipments
@@ -431,8 +430,7 @@ class MComCore(gymnasium.Env):
         idle = self.utility.scale(self.utility.lower)
 
         util = {
-            bs: sum(self.utilities[ue] for ue in self.connections[bs])
-            / len(self.connections[bs])
+            bs: sum(self.utilities[ue] for ue in self.connections[bs]) / len(self.connections[bs])
             if self.connections[bs]
             else idle
             for bs in self.stations.values()
@@ -446,9 +444,7 @@ class MComCore(gymnasium.Env):
         config = self.default_config()["ue"]
 
         for bs in self.stations.values():
-            isolines[bs] = self.channel.isoline(
-                bs, config, (self.width, self.height), drate
-            )
+            isolines[bs] = self.channel.isoline(bs, config, (self.width, self.height), drate)
 
         return isolines
 
@@ -487,9 +483,7 @@ class MComCore(gymnasium.Env):
                 bs: util if self.check_connectivity(bs, ue) else idle
                 for bs, util in bs_utilities.items()
             }
-            util_bcast_arr = np.asarray(
-                [util_bcast[bs] for bs in stations], dtype=np.float32
-            )
+            util_bcast_arr = np.asarray([util_bcast[bs] for bs in stations], dtype=np.float32)
 
             # (5) receive broadcast of (normalized) connected UE count
             # if broadcast is not received, set UE connection count to zero
@@ -518,9 +512,7 @@ class MComCore(gymnasium.Env):
             """Define dummy observation for non-active UEs."""
             onehot = np.zeros(self.NUM_STATIONS, dtype=np.float32)
             snrs = np.zeros(self.NUM_STATIONS, dtype=np.float32)
-            utility = np.asarray(
-                [self.utility.scale(self.utility.lower)], dtype=np.float32
-            )
+            utility = np.asarray([self.utility.scale(self.utility.lower)], dtype=np.float32)
             idle = self.utility.scale(self.utility.lower)
             util_bcast = idle * np.ones(self.NUM_STATIONS, dtype=np.float32)
             num_connected = np.ones(self.NUM_STATIONS, dtype=np.float32)
@@ -557,11 +549,13 @@ class MComCore(gymnasium.Env):
             self.mb_isolines = self.bs_isolines(1.0)
 
         # set up matplotlib figure & axis configuration
-        fig = plt.figure()
-        fx = max(3.0 / 2.0 * 1.25 * self.width / fig.dpi, 8.0)
-        fy = max(1.25 * self.height / fig.dpi, 5.0)
-        plt.close()
-        fig = plt.figure(figsize=(fx, fy))
+        # build the Figure directly (bypassing pyplot's stateful, GUI-backend-selecting
+        # plt.figure()) since it's immediately wrapped in an explicit Agg canvas below anyway;
+        # this also sidesteps environments where the GUI backend is broken/unavailable
+        dpi = plt.rcParams["figure.dpi"]
+        fx = max(3.0 / 2.0 * 1.25 * self.width / dpi, 8.0)
+        fy = max(1.25 * self.height / dpi, 5.0)
+        fig = Figure(figsize=(fx, fy))
         gs = fig.add_gridspec(
             ncols=2,
             nrows=3,
@@ -596,9 +590,6 @@ class MComCore(gymnasium.Env):
         canvas = FigureCanvas(fig)
         canvas.draw()
 
-        # prevents opening multiple figures on consecutive render() calls
-        plt.close()
-
         if mode == "rgb_array":
             # render RGB image for e.g. video recording
             # buffer_rgba() replaces tostring_rgb(), removed in matplotlib 3.10
@@ -630,6 +621,9 @@ class MComCore(gymnasium.Env):
                 # set window's caption and background color
                 pygame.display.set_caption("MComEnv")
 
+            # created together in the block above, so both are set from here on
+            assert self.window is not None and self.clock is not None
+
             # clear surface
             self.window.fill("white")
 
@@ -643,6 +637,11 @@ class MComCore(gymnasium.Env):
             # update the full display surface to the window
             pygame.display.flip()
 
+            # cap the frame rate so consecutive frames are evenly paced,
+            # otherwise rendering speed varies with how long each frame
+            # takes to draw and playback looks choppy
+            self.clock.tick(self.metadata["render_fps"])
+
             # handle pygame events (such as closing the window)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -655,6 +654,9 @@ class MComCore(gymnasium.Env):
         return None
 
     def render_simulation(self, ax) -> None:
+        # render() computes both isoline caches before calling this
+        assert self.conn_isolines is not None and self.mb_isolines is not None
+
         colormap = colormaps["RdYlGn"]
         # define normalization for unscaled utilities
         unorm = plt.Normalize(self.utility.lower, self.utility.upper)

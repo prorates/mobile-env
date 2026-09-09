@@ -1721,6 +1721,7 @@ docs = [
 ]
 rllib = [
     { name = "ray", extra = ["rllib"], marker = "extra == 'extra-10-mobile-env-rllib'" },
+    { name = "torch" },
 ]
 test = [
     { name = "pytest" },
@@ -1746,12 +1747,13 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.0" },
     { name = "pygame-ce", specifier = ">=2.5" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0" },
-    { name = "ray", extras = ["rllib"], marker = "extra == 'rllib'", specifier = ">=2.3" },
+    { name = "ray", extras = ["rllib"], marker = "extra == 'rllib'", specifier = ">=2.9.0" },
     { name = "sb3-contrib", marker = "extra == 'test'", specifier = ">=2.0" },
     { name = "shapely", specifier = ">=2.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.0" },
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = ">=2.0" },
     { name = "svgpath2mpl", specifier = ">=1.0" },
+    { name = "torch", marker = "extra == 'rllib'" },
 ]
 provides-extras = ["test", "docs", "rllib"]
 

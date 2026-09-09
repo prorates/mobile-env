@@ -45,12 +45,15 @@ class UserEquipment:
         self.noise = noise
         self.height = height
 
-        # position and the episode's arrival/departure times are assigned by
-        # the environment at reset(); a UE has none before its first episode
-        self.x: float | None = None
-        self.y: float | None = None
-        self.stime: int | None = None
-        self.extime: int | None = None
+        # Declared, not assigned: MComCore.reset() sets all four for every UE
+        # before any of them is read, so they are never legitimately absent.
+        # Annotating them Optional instead would push a `| None` guard into
+        # every comparison in the step loop without making anything safer --
+        # reading one before reset() is a bug either way.
+        self.x: float
+        self.y: float
+        self.stime: int
+        self.extime: int
 
     @property
     def point(self):

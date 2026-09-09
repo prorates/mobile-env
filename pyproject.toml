@@ -55,7 +55,14 @@ docs = [
 # `mobile_env.wrappers.multi_agent` imports ray at module scope. Nothing else
 # imports that module, so ray stays out of the default install.
 rllib = [
-    "ray[rllib]>=2.3",
+    # >=2.9.0 is the oldest release with a stable RLModule API; the wrapper and
+    # tests/test_rllib.py use RLlib's "new API stack" (per-agent spaces,
+    # Algorithm.get_module() + forward_inference()), not the removed
+    # Algorithm.compute_single_action().
+    "ray[rllib]>=2.9.0",
+    # RLlib needs a DL framework for the multi-agent PPO example; it also arrives
+    # transitively via stable-baselines3, but the wrapper depends on it directly.
+    "torch",
 ]
 
 # PEP 735 group, installed by `uv sync` by default. ci.yml runs `uv run ruff`,
@@ -89,7 +96,10 @@ conflicts = [[{ extra = "rllib" }, { group = "dev" }]]
 include = ["mobile_env*"]
 
 [tool.ruff]
-line-length = 88
+# Match upstream (stefanbschneider/mobile-env) exactly. This is a fork we keep
+# syncing from: a different width reflows every line of every file, which turns
+# each sync into a whole-tree conflict rather than a review of real changes.
+line-length = 100
 target-version = "py310"
 # Not this project's code: bin/ and .claude/ are delivered by claude-meta and are
 # overwritten by the next broadcast, so linting them only creates churn.
@@ -120,6 +130,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # re-export / import-for-side-effect
+# `obs, reward, terminated, truncated, info = env.step(...)` is the gymnasium
+# step signature; naming all five documents it even where a test reads one.
+"tests/*" = ["RUF059"]
+"docs/scripts/*" = ["RUF059"]
 
 [tool.mypy]
 # No python_version pin: numpy's bundled stubs use PEP 695 `type` statements, so

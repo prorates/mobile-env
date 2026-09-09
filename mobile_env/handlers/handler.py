@@ -3,13 +3,18 @@ import abc
 from gymnasium.spaces.space import Space
 
 
-class Handler:
+class Handler(abc.ABC):
     """Defines Gymnasium interface methods called by core simulation."""
 
     @classmethod
     @abc.abstractmethod
     def action_space(cls, env) -> Space:
         """Defines action space for passed environment."""
+
+    @classmethod
+    @abc.abstractmethod
+    def ue_obs_size(cls, env) -> int:
+        """Size of the observation space."""
 
     @classmethod
     @abc.abstractmethod
@@ -31,9 +36,13 @@ class Handler:
     def reward(cls, env):
         """Computes rewards for agent."""
 
-    @classmethod
+    @classmethod  # noqa: B027
     def check(cls, env):
-        """Check if handler is applicable to simulation configuration."""
+        """Check if handler is applicable to simulation configuration.
+
+        Deliberately concrete and empty: a handler with no applicability
+        constraint inherits the no-op rather than restating it.
+        """
 
     @classmethod
     def info(cls, env):
