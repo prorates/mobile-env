@@ -34,7 +34,10 @@ dependencies = [
     "matplotlib>=3.9",
     "numpy>=2.0",
     "pandas>=2.0",
-    "pygame>=2.5",
+    # pygame-ce, not pygame: it is the fork gymnasium itself depends on, it
+    # ships cp314 wheels (pygame has none, so 3.14 compiles from source), and
+    # it is actively released. Drop-in — the import is still `import pygame`.
+    "pygame-ce>=2.5",
     "shapely>=2.0",
     "svgpath2mpl>=1.0",
 ]
@@ -60,6 +63,9 @@ rllib = [
 # to be resolvable in the project environment.
 [dependency-groups]
 dev = [
+    # pin the current gymnasium for development and CI; the runtime floor stays
+    # permissive so `.[rllib]` can still resolve ray's exact gymnasium==1.2.2
+    "gymnasium>=1.3",
     "ruff>=0.16",
     "mypy>=1.13",
     "pytest>=8.0",
@@ -71,6 +77,13 @@ dev = [
 Homepage = "https://github.com/stefanbschneider/mobile-env"
 Documentation = "https://mobile-env.readthedocs.io"
 Repository = "https://github.com/stefanbschneider/mobile-env"
+
+[tool.uv]
+# ray[rllib] pins `gymnasium==1.2.2` exactly. Without this, that pin propagates
+# through uv.lock and holds contributors and CI a minor behind the gymnasium a
+# plain `pip install mobile-env` produces. Declaring the extra as conflicting
+# makes uv resolve it in its own fork instead.
+conflicts = [[{ extra = "rllib" }, { group = "dev" }]]
 
 [tool.setuptools.packages.find]
 include = ["mobile_env*"]

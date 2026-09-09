@@ -633,10 +633,12 @@ class MComCore(gymnasium.Env):
             # clear surface
             self.window.fill("white")
 
-            # plot matplotlib's RGBA frame on the pygame surface
-            screen = pygame.display.get_surface()
+            # plot matplotlib's RGBA frame on the pygame surface.
+            # blit onto self.window rather than re-fetching via
+            # display.get_surface(), which is the same surface but typed
+            # Optional because it is None before a display mode is set.
             plot = pygame.image.frombuffer(data.tobytes(), size, "RGBA")
-            screen.blit(plot, (0, 0))
+            self.window.blit(plot, (0, 0))
 
             # update the full display surface to the window
             pygame.display.flip()
