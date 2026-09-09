@@ -1,20 +1,18 @@
-from typing import Dict
-
 import pandas as pd
 
 
 class Monitor:
     def __init__(
-        self, scalar_metrics: Dict, ue_metrics: Dict, bs_metrics: Dict, **kwargs
+        self, scalar_metrics: dict, ue_metrics: dict, bs_metrics: dict, **kwargs
     ):
 
-        self.scalar_metrics: Dict = scalar_metrics
-        self.ue_metrics: Dict = ue_metrics
-        self.bs_metrics: Dict = bs_metrics
+        self.scalar_metrics: dict = scalar_metrics
+        self.ue_metrics: dict = ue_metrics
+        self.bs_metrics: dict = bs_metrics
 
-        self.scalar_results: Dict = None
-        self.ue_results: Dict = None
-        self.bs_results: Dict = None
+        self.scalar_results: dict = None
+        self.ue_results: dict = None
+        self.bs_results: dict = None
 
     def reset(self):
         """Reset tracked results for all metrics."""

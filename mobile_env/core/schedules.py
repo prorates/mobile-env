@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from typing import List
 
 from mobile_env.core.entities import BaseStation
 
@@ -12,17 +11,17 @@ class Scheduler:
         pass
 
     @abstractmethod
-    def share(self, bs: BaseStation, rates: List[float]) -> List[float]:
+    def share(self, bs: BaseStation, rates: list[float]) -> list[float]:
         pass
 
 
 class ResourceFair(Scheduler):
-    def share(self, bs: BaseStation, rates: List[float]) -> List[float]:
+    def share(self, bs: BaseStation, rates: list[float]) -> list[float]:
         return [rate / len(rates) for rate in rates]
 
 
 class RateFair(Scheduler):
-    def share(self, bs: BaseStation, rates: List[float]) -> List[float]:
+    def share(self, bs: BaseStation, rates: list[float]) -> list[float]:
         # equalize the granted rate: f_i * rates[i] = R for all i with sum(f_i) = 1
         # yields R = 1 / sum(1 / rates[i]). One entry per connection, as the
         # caller zips the result against the base station's connections.

@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import ClassVar
 
 import numpy as np
 from gymnasium import spaces
@@ -7,7 +7,7 @@ from mobile_env.handlers.handler import Handler
 
 
 class MComCentralHandler(Handler):
-    features = ["connections", "snrs", "utility"]
+    features: ClassVar[list[str]] = ["connections", "snrs", "utility"]
 
     @classmethod
     def ue_obs_size(cls, env) -> int:
@@ -26,14 +26,14 @@ class MComCentralHandler(Handler):
         return spaces.Box(low=-1.0, high=1.0, shape=(env.NUM_USERS * size,))
 
     @classmethod
-    def action(cls, env, actions: Tuple[int]) -> Dict[int, int]:
+    def action(cls, env, actions: tuple[int]) -> dict[int, int]:
         """Transform flattend actions to expected shape of core environment."""
-        assert len(actions) == len(
-            env.users
-        ), "Number of actions must equal overall UEs."
+        assert len(actions) == len(env.users), (
+            "Number of actions must equal overall UEs."
+        )
 
         users = sorted(env.users)
-        return {ue_id: action for ue_id, action in zip(users, actions)}
+        return dict(zip(users, actions, strict=True))
 
     @classmethod
     def observation(cls, env) -> np.ndarray:
@@ -50,7 +50,7 @@ class MComCentralHandler(Handler):
     @classmethod
     def reward(cls, env):
         """The central agent receives the average UE utility as reward."""
-        utilities = np.asarray([utility for utility in env.utilities.values()])
+        utilities = np.asarray(list(env.utilities.values()))
         # assert that rewards are in range [-1, +1]
         bounded = np.logical_and(utilities >= -1, utilities <= 1).all()
         assert bounded, "Utilities must be in range [-1, +1]"

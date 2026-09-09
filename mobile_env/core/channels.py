@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -18,7 +17,6 @@ class Channel:
     @abstractmethod
     def power_loss(self, bs: BaseStation, ue: UserEquipment) -> float:
         """Calculate power loss for transmission between BS and UE."""
-        pass
 
     def snr(self, bs: BaseStation, ue: UserEquipment):
         """Calculate SNR for transmission between BS and UE."""
@@ -29,8 +27,8 @@ class Channel:
     def isoline(
         self,
         bs: BaseStation,
-        ue_config: Dict,
-        map_bounds: Tuple,
+        ue_config: dict,
+        map_bounds: tuple,
         dthresh: float,
         num: int = 32,
     ):
@@ -57,7 +55,7 @@ class Channel:
 
                 return self.datarate(bs, dummy, snr)
 
-            points = zip(xs.tolist(), ys.tolist())
+            points = zip(xs.tolist(), ys.tolist(), strict=True)
             datarates = np.asarray(list(map(drate, points)))
 
             # find largest / smallest x coordinate where drate is exceeded
@@ -66,7 +64,7 @@ class Channel:
 
             isoline.append((xs[idx], ys[idx]))
 
-        xs, ys = zip(*isoline)
+        xs, ys = zip(*isoline, strict=True)
         return xs, ys
 
     @classmethod
@@ -80,14 +78,15 @@ class Channel:
     @classmethod
     def boundary_collison(
         cls, theta: float, x0: float, y0: float, width: float, height: float
-    ) -> Tuple:
+    ) -> tuple:
         """Find point on map boundaries with angle theta to BS."""
         # collision with right boundary of map rectangle
         rgt_x1, rgt_y1 = width, np.tan(theta) * (width - x0) + y0
         # collision with upper boundary of map rectangle
-        upr_x1, upr_y1 = (-1) * np.tan(theta - 1 / 2 * np.pi) * (
-            height - y0
-        ) + x0, height
+        upr_x1, upr_y1 = (
+            (-1) * np.tan(theta - 1 / 2 * np.pi) * (height - y0) + x0,
+            height,
+        )
         # collision with left boundary of map rectangle
         lft_x1, lft_y1 = 0.0, np.tan(theta) * (0.0 - x0) + y0
         # collision with lower boundary of map rectangle

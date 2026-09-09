@@ -65,6 +65,15 @@ include = ["mobile_env*"]
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+# Not this project's code: bin/ and .claude/ are delivered by claude-meta and are
+# overwritten by the next broadcast, so linting them only creates churn.
+# Notebooks are executed artifacts, checked by running them, not by linting.
+extend-exclude = [".claude", "bin", "examples"]
+
+[tool.ruff.format]
+# Docs are teaching material: mechanical formatting collapsed handler stub
+# bodies to one line, which reads worse than what the author wrote.
+exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = [

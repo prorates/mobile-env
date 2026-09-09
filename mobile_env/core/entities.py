@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from shapely.geometry import Point
 
 
@@ -7,7 +5,7 @@ class BaseStation:
     def __init__(
         self,
         bs_id: int,
-        pos: Tuple[float, float],
+        pos: tuple[float, float],
         bw: float,
         freq: float,
         tx: float,

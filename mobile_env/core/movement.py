@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -25,14 +24,12 @@ class Movement:
             self.rng = np.random.default_rng(self.seed)
 
     @abstractmethod
-    def move(self, ue: UserEquipment) -> Tuple[float, float]:
+    def move(self, ue: UserEquipment) -> tuple[float, float]:
         """Move UE at each time step."""
-        pass
 
     @abstractmethod
-    def initial_position(self, ue: UserEquipment) -> Tuple[float, float]:
+    def initial_position(self, ue: UserEquipment) -> tuple[float, float]:
         """Reset position of UE e.g. after episode ends."""
-        pass
 
 
 class RandomWaypointMovement(Movement):
@@ -40,8 +37,8 @@ class RandomWaypointMovement(Movement):
         super().__init__(**kwargs)
 
         # track waypoints and initial positions per UE
-        self.waypoints: Dict[UserEquipment, Tuple[float, float]] = None
-        self.initial: Dict[UserEquipment, Tuple[float, float]] = None
+        self.waypoints: dict[UserEquipment, tuple[float, float]] = None
+        self.initial: dict[UserEquipment, tuple[float, float]] = None
 
     def reset(self) -> None:
         super().reset()
@@ -50,7 +47,7 @@ class RandomWaypointMovement(Movement):
         self.waypoints = {}
         self.initial = {}
 
-    def move(self, ue: UserEquipment) -> Tuple[float, float]:
+    def move(self, ue: UserEquipment) -> tuple[float, float]:
         """Move UE a step towards the random waypoint."""
         # generate random waypoint if UE has none so far
         if ue not in self.waypoints:
@@ -73,7 +70,7 @@ class RandomWaypointMovement(Movement):
 
         return tuple(position)
 
-    def initial_position(self, ue: UserEquipment) -> Tuple[float, float]:
+    def initial_position(self, ue: UserEquipment) -> tuple[float, float]:
         """Return initial position of UE at the beginning of the episode."""
         if ue not in self.initial:
             x = self.rng.uniform(0, self.width)

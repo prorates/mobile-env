@@ -1,4 +1,5 @@
 """Simple test of small env similar to test notebook."""
+
 import gymnasium
 import pytest
 
@@ -17,10 +18,10 @@ def test_env_stepping(env_name):
     """
     # create a small mobile environment for a single, centralized control agent
     env = gymnasium.make(env_name)
-    obs, info = env.reset()
+    _obs, _info = env.reset()
     done = False
 
     while not done:
         random_action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(random_action)
+        _obs, _reward, terminated, truncated, _info = env.step(random_action)
         done = terminated or truncated
