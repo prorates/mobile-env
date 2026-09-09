@@ -1,3 +1,9 @@
+# Scenario Registry
+
+## Summary
+
+The package ships three fixed network topologies — small, medium and large — so that results published against `mobile-env` are comparable between users rather than depending on a topology each experimenter invented. Each fixes the area, the base-station positions and the user-equipment count, while still accepting the same configuration dictionary as the base environment, so a custom channel model can be studied on a standard topology. Importing the package registers all six combinations of the three sizes and the two control modes with Gymnasium, so no explicit registration call is ever needed. The identifiers follow one stable pattern, `mobile-<size>-<mode>-v0`.
+
 ## Purpose
 
 Defines the ready-made environments the package ships and how they are obtained: three network sizes crossed with the two control modes, registered with Gymnasium so an experimenter can create any of them by identifier with no setup.

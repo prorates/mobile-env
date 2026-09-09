@@ -1,3 +1,9 @@
+# Metrics and Monitoring
+
+## Summary
+
+Measurement is separate from the simulation: a monitor holds named callables in three categories — scalar, per-user-equipment and per-base-station — and evaluates each one against the simulation state at every step. Four scalar metrics are always tracked regardless of configuration, because the visualization depends on them: number of connections, number of connected users, mean data rate and mean utility. Results are readable two ways — the latest value of every metric rides along in each step's info dictionary, and the full per-episode history is available as three tables indexed by time step. Recorded history is per-episode and is cleared on reset.
+
 ## Purpose
 
 Defines how an episode is measured: the built-in metrics always available to an experimenter, the registration of custom scalar, per-user and per-base-station metrics, and the two ways results are read back — live in the step info dictionary and as tables after the episode.

@@ -1,3 +1,9 @@
+# UE Mobility and Arrival
+
+## Summary
+
+Two models together decide where user equipments are and whether they are there at all: mobility places and moves them across the area, arrival decides when each starts requesting service and when it departs. The default random-waypoint mobility walks each user equipment towards a uniformly drawn waypoint at its own velocity, snapping onto the waypoint once within one step of it and drawing a new one. The default arrival model has no departures at all, giving a fixed population — which is what the centralized handler requires, since a fixed-size action vector cannot represent a changing one. Both draw from seeded streams that either restart each episode or continue across episodes, according to the per-episode reseeding flag.
+
 ## Purpose
 
 Defines where user equipments are and when they are present: the mobility model that places and moves them across the area, and the arrival model that decides when each one starts requesting service and when it departs.

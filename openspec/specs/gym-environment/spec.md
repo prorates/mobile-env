@@ -1,3 +1,9 @@
+# Gym Environment
+
+## Summary
+
+The environment is a Gymnasium `Env`, so any reinforcement-learning framework drives it through the ordinary `reset`/`step`/`render`/`close` loop with no adapter. Its two load-bearing peculiarities are that an episode never terminates naturally — it only truncates, at the episode time limit or the last departure, whichever comes first — and that a step leaving no active user equipment advances time internally rather than asking the agent for a meaningless action. The action and observation spaces are not defined here at all; they come from the configured control handler, which is what lets one simulation serve both centralized and multi-agent control. Every step returns the handler's info merged with the latest value of each tracked metric, so an experimenter reads results without a separate callback.
+
 ## Purpose
 
 Defines the Gymnasium-compatible control loop the environment exposes to any agent or framework: how an episode is created, reset, stepped, terminated and closed, and what an agent receives back at each step.

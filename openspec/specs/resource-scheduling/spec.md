@@ -1,3 +1,9 @@
+# Resource Scheduling
+
+## Summary
+
+The scheduler is what makes connections compete: it takes the maximum rate each connected user equipment could reach if it had a base station to itself, and returns what each one actually gets. This single decision is what turns multi-cell selection into a coordination problem rather than a greedy one — without it, connecting to more base stations would always be free. The default resource-fair scheduler splits resources equally, so each connection gets its own maximum rate divided by the number of connections and a better channel still earns a better rate. A rate-fair alternative instead equalizes the delivered rate across a base station's connections.
+
 ## Purpose
 
 Defines how a base station divides its limited radio resources among the user equipments connected to it, which is what makes connections compete and turns multi-cell selection into a coordination problem.

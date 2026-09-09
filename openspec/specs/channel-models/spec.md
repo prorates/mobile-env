@@ -1,3 +1,9 @@
+# Channel Models
+
+## Summary
+
+The channel decides what the radio can actually deliver: it turns the geometry and radio parameters of a base station and a user equipment into a power loss, and from that a signal-to-noise ratio and an achievable data rate. A custom model implements power loss and nothing else — signal-to-noise ratio, Shannon-limited data rate and coverage isolines are all derived from it. A connection below the user equipment's threshold yields a data rate of exactly zero rather than a small one, which is what makes the threshold a hard connectivity boundary rather than a soft penalty. The shipped default is Okumura–Hata, defined so that zero separation returns a finite loss instead of failing on a logarithm of zero.
+
 ## Purpose
 
 Defines the radio channel contract: how a channel model turns the geometry and radio parameters of a base station and a user equipment into a power loss, a signal-to-noise ratio and an achievable data rate, and the default Okumura–Hata model shipped with the environment.

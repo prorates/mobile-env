@@ -1,3 +1,9 @@
+# Control Handlers
+
+## Summary
+
+A control handler is the strategy object that decides how one simulation is presented to an agent: it fixes the action and observation spaces, interprets incoming actions, selects which features agents see, and computes rewards. The centralized handler exposes the whole network to a single agent as one multi-discrete action and one flat observation vector, rewarded by the mean utility across active user equipments. The multi-agent handler instead gives every user equipment its own observation and its own reward, and that reward deliberately mixes the agent's own utility with the utilities of nearby base stations weighted by how many users they serve, so an agent that overloads a neighbouring cell pays for it. Because a centralized handler encodes a fixed number of users, it refuses at reset any arrival model under which the population changes.
+
 ## Purpose
 
 Defines how the same underlying simulation is presented to different kinds of agent: a control handler fixes the action and observation spaces, interprets incoming actions, selects the observations agents see, and computes their rewards, so centralized and multi-agent control share one simulation.

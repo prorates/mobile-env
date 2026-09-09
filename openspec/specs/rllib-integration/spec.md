@@ -1,3 +1,9 @@
+# RLlib Integration
+
+## Summary
+
+Ray RLlib expects a different multi-agent shape than the environment's own, and this wrapper is the adapter between them. It re-declares the spaces per agent rather than per environment, and translates the environment's single truncation flag into the per-agent termination and truncation dictionaries RLlib requires — keyed by the agents present in the *previous* observation, since an agent that has just departed must still be reported as finished. Termination is always false for every agent, because the environment has no terminal state; only truncation ever fires. The environment's info is placed under RLlib's shared-info key so that info keys never fall outside the set of returned observations.
+
 ## Purpose
 
 Defines the adapter that lets the multi-agent environment be trained with Ray RLlib, which expects a per-agent view of spaces and per-agent termination dictionaries rather than the environment's own multi-agent form.

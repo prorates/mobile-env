@@ -1,3 +1,9 @@
+# QoE Utility
+
+## Summary
+
+The utility model is where a data rate becomes a quality-of-experience score, and it is deliberately not linear. The default is logarithmic and clipped to a configurable lower and upper bound, so the first megabit per second is worth far more to a user equipment than the tenth — which is precisely why a globally good policy is not just "give everyone as much rate as possible". Every utility is scaled into `[-1, 1]` before it reaches a reward or an observation, with the lower bound mapping to `-1`, and the scaling is invertible so the raw value can be recovered for display. A user equipment with no service receives the lower bound rather than an error or a zero.
+
 ## Purpose
 
 Defines how a user equipment's data rate is turned into a quality-of-experience utility, and how that utility is scaled into the bounded range used for rewards and observations — the piece that makes quality of experience grow sub-linearly with data rate.

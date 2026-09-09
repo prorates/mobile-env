@@ -1,3 +1,9 @@
+# Network Simulation
+
+## Summary
+
+This is the simulated world the agents act on: base stations at fixed positions, user equipments that move, and the downlink connections between them. A connection may exist only while the signal-to-noise ratio exceeds the user equipment's threshold, and an action naming a base station toggles that connection rather than setting it, so an agent connects and disconnects with the same action value. The coordination problem lives in two competing effects — a user equipment raises its own data rate by holding more connections, while each base station divides fixed resources among everyone connected to it. Data rates become bounded utilities in `[-1, 1]`, which is what rewards, observations and metrics are all built from.
+
 ## Purpose
 
 Defines the simulated mobile network itself: base stations and user equipments, when a downlink connection may exist between them, how base-station resources become per-connection data rates, and how those data rates become the quality-of-experience utilities that drive rewards and metrics.

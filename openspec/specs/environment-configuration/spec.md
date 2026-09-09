@@ -1,3 +1,9 @@
+# Environment Configuration
+
+## Summary
+
+A caller configures the environment with a partial dictionary that is deep-merged over the published defaults, so overriding one nested base-station parameter leaves every other default intact. The same dictionary is how the simulation is extended: assigning a class to the `channel`, `movement`, `arrival`, `scheduler`, `utility` or `handler` key replaces that model wholesale, with its constructor arguments supplied through the matching `_params` entry. This is the project's main extension point — a custom path-loss model is a class plus two dictionary entries, not a fork. One configured seed is fanned out into a distinct derived seed per stochastic model, so models never share a random stream and a run is reproducible from that single value.
+
 ## Purpose
 
 Defines how an environment is configured and extended: the default parameter set, how a caller's partial configuration is merged into it, and how the simulation models (channel, movement, arrival, scheduler, utility, control handler) are replaced with custom implementations.

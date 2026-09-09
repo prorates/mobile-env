@@ -1,3 +1,9 @@
+# Observation Features
+
+## Summary
+
+The simulation computes one shared, named feature set per user equipment each step — connections, signal-to-noise ratios, own utility, broadcast base-station utilities and broadcast connection counts — from which each handler selects the subset it exposes. Keeping this vocabulary in one place is what lets the centralized handler use three features and the multi-agent handler five without either redefining what a feature means. Everything is normalized for direct use in a bounded observation space: connections are one-hot, signal-to-noise ratios are relative to the best base station the user equipment currently sees, and connection counts are relative to the total in range. The two broadcast features are limited to base stations actually in range, so an out-of-range base station reads as a defined placeholder rather than leaking information a real user equipment could not receive.
+
 ## Purpose
 
 Defines the base set of per-user-equipment features the simulation computes each step, from which any control handler selects the observation it exposes — the shared, normalized vocabulary that keeps centralized, multi-agent and custom handlers consistent.
