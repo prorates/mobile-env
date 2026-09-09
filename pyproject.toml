@@ -55,6 +55,18 @@ rllib = [
     "ray[rllib]>=2.3",
 ]
 
+# PEP 735 group, installed by `uv sync` by default. ci.yml runs `uv run ruff`,
+# `uv run mypy` and `uv run pytest` after `uv sync --locked`, so the tools have
+# to be resolvable in the project environment.
+[dependency-groups]
+dev = [
+    "ruff>=0.16",
+    "mypy>=1.13",
+    "pytest>=8.0",
+    "sb3-contrib>=2.0",
+    "pre-commit>=4.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/stefanbschneider/mobile-env"
 Documentation = "https://mobile-env.readthedocs.io"

@@ -1,6 +1,6 @@
 # This workflow runs the build, lints, and tests
 
-name: CI
+name: matrix-build
 
 on:
   push:
@@ -17,27 +17,25 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install mobile-env and additional dependencies
+    # Installs from pyproject.toml with the `test` extra; the old
+    # tests/requirements.txt was folded into it.
+    - name: Install mobile-env and test dependencies
       run: |
-        # sudo apt update -y
-        # sudo apt install ffmpeg imagemagick
         python -m pip install --upgrade pip
-        pip install .
-        pip install -r tests/requirements.txt
+        pip install '.[test]'
 
-    - name: Lint with flake8
-      run: |
-        flake8 mobile_env --per-file-ignores="__init__.py:F401"
-
+    # Linting and type-checking run once, in ci.yml. This workflow answers a
+    # different question: does the package install and pass its tests on every
+    # supported interpreter and operating system?
     - name: Run tests with pytest
       run: |
         pytest
