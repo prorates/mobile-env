@@ -1,6 +1,6 @@
 import string
 from collections import Counter, defaultdict
-from typing import Any, ClassVar
+from typing import Any
 
 import gymnasium
 import matplotlib.patheffects as pe
@@ -27,7 +27,8 @@ class MComCore(gymnasium.Env):
     NOOP_ACTION = 0
     # one simulation step per frame; 4 fps is slow enough to follow UEs
     # moving and connections being made and released
-    metadata: ClassVar[dict[str, Any]] = {
+    # not ClassVar: gymnasium.Env declares metadata as an instance variable
+    metadata: dict[str, Any] = {  # noqa: RUF012
         "render_modes": ["rgb_array", "human"],
         "render_fps": 4,
     }
@@ -423,7 +424,7 @@ class MComCore(gymnasium.Env):
         # strict=True: a scheduler must return exactly one rate per connection
         return {(bs, ue): rate for ue, rate in zip(conns, rates, strict=True)}
 
-    def station_utilities(self) -> dict[BaseStation, UserEquipment]:
+    def station_utilities(self) -> dict[BaseStation, float]:
         """Compute average utility of UEs connected to the basestation."""
         # set utility of BS with no active connections (idle BS) to
         # (scaled) lower utility bound
@@ -467,9 +468,9 @@ class MComCore(gymnasium.Env):
             onehot[[bs.bs_id for bs in connections]] = 1
 
             # (2) (normalized) SNR between UE to each BS
-            snrs = [self.channel.snr(bs, ue) for bs in stations]
-            maxsnr = max(snrs)
-            snrs = np.asarray([snr / maxsnr for snr in snrs], dtype=np.float32)
+            raw_snrs = [self.channel.snr(bs, ue) for bs in stations]
+            maxsnr = max(raw_snrs)
+            snrs = np.asarray([snr / maxsnr for snr in raw_snrs], dtype=np.float32)
 
             # (3) include normalized utility of UE
             utility = (
@@ -477,7 +478,7 @@ class MComCore(gymnasium.Env):
                 if ue in self.utilities
                 else self.utility.scale(self.utility.lower)
             )
-            utility = np.asarray([utility], dtype=np.float32)
+            utility_arr = np.asarray([utility], dtype=np.float32)
 
             # (4) receive broadcast of average BS utilities of BSs in range
             # if broadcast is not received, set utility to lower bound
@@ -486,7 +487,7 @@ class MComCore(gymnasium.Env):
                 bs: util if self.check_connectivity(bs, ue) else idle
                 for bs, util in bs_utilities.items()
             }
-            util_bcast = np.asarray(
+            util_bcast_arr = np.asarray(
                 [util_bcast[bs] for bs in stations], dtype=np.float32
             )
 
@@ -497,19 +498,19 @@ class MComCore(gymnasium.Env):
                     return len(self.connections[bs])
                 return 0.0
 
-            stations_connected = [num_connected(bs) for bs in stations]
+            connected_counts = [num_connected(bs) for bs in stations]
 
             # normalize by the max. number of connections
-            total = max(1, sum(stations_connected))
+            total = max(1, sum(connected_counts))
             stations_connected = np.asarray(
-                [num / total for num in stations_connected], dtype=np.float32
+                [num / total for num in connected_counts], dtype=np.float32
             )
 
             return {
                 "connections": onehot,
                 "snrs": snrs,
-                "utility": utility,
-                "bcast": util_bcast,
+                "utility": utility_arr,
+                "bcast": util_bcast_arr,
                 "stations_connected": stations_connected,
             }
 
@@ -539,12 +540,14 @@ class MComCore(gymnasium.Env):
 
         return obs
 
-    def render(self) -> None:
+    # gymnasium types Env.render() with an unbound RenderFrame TypeVar, which no
+    # concrete return type can satisfy; this env always renders an RGB array.
+    def render(self) -> np.ndarray | None:  # type: ignore[override]
         mode = self.render_mode
 
         # do not continue rendering once environment has been closed
         if self.closed:
-            return
+            return None
 
         # calculate isoline contours for BSs' connectivity range
         if self.conn_isolines is None:
@@ -632,7 +635,7 @@ class MComCore(gymnasium.Env):
 
             # plot matplotlib's RGBA frame on the pygame surface
             screen = pygame.display.get_surface()
-            plot = pygame.image.frombuffer(data, size, "RGBA")
+            plot = pygame.image.frombuffer(data.tobytes(), size, "RGBA")
             screen.blit(plot, (0, 0))
 
             # update the full display surface to the window
@@ -645,6 +648,9 @@ class MComCore(gymnasium.Env):
 
         else:
             raise ValueError("Invalid rendering mode.")
+
+        # human mode draws to a window rather than returning a frame
+        return None
 
     def render_simulation(self, ax) -> None:
         colormap = colormaps["RdYlGn"]

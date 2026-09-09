@@ -10,9 +10,10 @@ class Monitor:
         self.ue_metrics: dict = ue_metrics
         self.bs_metrics: dict = bs_metrics
 
-        self.scalar_results: dict = None
-        self.ue_results: dict = None
-        self.bs_results: dict = None
+        # populated by reset(); no results exist before the first episode
+        self.scalar_results: dict | None = None
+        self.ue_results: dict | None = None
+        self.bs_results: dict | None = None
 
     def reset(self):
         """Reset tracked results for all metrics."""

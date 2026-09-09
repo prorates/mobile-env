@@ -15,7 +15,7 @@ class Movement:
 
         # RNG for movement and initial positions of UEs
         self.seed = seed
-        self.rng = None
+        self.rng: np.random.Generator | None = None
 
     def reset(self) -> None:
         """Reset state of movement object after episode ends."""
@@ -49,6 +49,8 @@ class RandomWaypointMovement(Movement):
 
     def move(self, ue: UserEquipment) -> tuple[float, float]:
         """Move UE a step towards the random waypoint."""
+        assert self.rng is not None, "reset() must run before move()"
+
         # generate random waypoint if UE has none so far
         if ue not in self.waypoints:
             wx = self.rng.uniform(0, self.width)
@@ -61,8 +63,7 @@ class RandomWaypointMovement(Movement):
         # if already close enough to waypoint, move directly onto waypoint
         if np.linalg.norm(position - waypoint) <= ue.velocity:
             # remove waypoint from dict after it has been reached
-            waypoint = self.waypoints.pop(ue)
-            return waypoint
+            return self.waypoints.pop(ue)
 
         # else move by self.velocity towards waypoint
         v = waypoint - position
@@ -72,6 +73,8 @@ class RandomWaypointMovement(Movement):
 
     def initial_position(self, ue: UserEquipment) -> tuple[float, float]:
         """Return initial position of UE at the beginning of the episode."""
+        assert self.rng is not None, "reset() must run before initial_position()"
+
         if ue not in self.initial:
             x = self.rng.uniform(0, self.width)
             y = self.rng.uniform(0, self.height)

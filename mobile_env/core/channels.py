@@ -35,7 +35,8 @@ class Channel:
         """Isoline where UEs receive at least `dthres` max. data."""
         width, height = map_bounds
 
-        dummy = UserEquipment(None, **ue_config)
+        # a probe UE used only to sample the channel; -1 marks it as not real
+        dummy = UserEquipment(-1, **ue_config)
 
         isoline = []
 
@@ -59,13 +60,13 @@ class Channel:
             datarates = np.asarray(list(map(drate, points)))
 
             # find largest / smallest x coordinate where drate is exceeded
-            (idx,) = np.where(datarates > dthresh)
-            idx = np.max(idx)
+            (exceeded,) = np.where(datarates > dthresh)
+            idx = int(np.max(exceeded))
 
             isoline.append((xs[idx], ys[idx]))
 
-        xs, ys = zip(*isoline, strict=True)
-        return xs, ys
+        iso_xs, iso_ys = zip(*isoline, strict=True)
+        return iso_xs, iso_ys
 
     @classmethod
     def datarate(cls, bs: BaseStation, ue: UserEquipment, snr: float):

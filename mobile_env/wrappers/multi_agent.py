@@ -34,7 +34,9 @@ class RLlibMAWrapper(MultiAgentEnv):
 
     def step(
         self, action_dict: MultiAgentDict
-    ) -> tuple[MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict]:
+    ) -> tuple[
+        MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict, MultiAgentDict
+    ]:
         obs, rews, terminated, truncated, infos = self.env.step(action_dict)
 
         # UEs that are not active after `step()` are done (here: truncated)

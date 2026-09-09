@@ -36,7 +36,9 @@ class MComMAHandler(Handler):
             for ue_id in env.users
         }
 
-        return gymnasium.spaces.Dict(space)
+        # gymnasium's stubs type Dict's keys as str; UE ids are ints, which
+        # the runtime accepts and the rest of the package relies on.
+        return gymnasium.spaces.Dict(space)  # type: ignore[arg-type]
 
     @classmethod
     def reward(cls, env):
@@ -79,8 +81,7 @@ class MComMAHandler(Handler):
         }
 
         # flatten each UE's Dict observation to vector representation
-        obs = {ue_id: np.concatenate(ue_obs) for ue_id, ue_obs in obs.items()}
-        return obs
+        return {ue_id: np.concatenate(ue_obs) for ue_id, ue_obs in obs.items()}
 
     @classmethod
     def action(cls, env, action: dict[int, int]):

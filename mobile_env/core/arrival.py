@@ -11,7 +11,7 @@ class Arrival:
         self.seed = seed
         self.reset_rng_episode = reset_rng_episode
         # RNG for arrival and departure times of UEs
-        self.rng = None
+        self.rng: np.random.Generator | None = None
 
     def reset(self) -> None:
         # case: movement patterns remain unchanged between episodes

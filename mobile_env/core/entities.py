@@ -45,10 +45,12 @@ class UserEquipment:
         self.noise = noise
         self.height = height
 
-        self.x: float = None
-        self.y: float = None
-        self.stime: int = None
-        self.extime: int = None
+        # position and the episode's arrival/departure times are assigned by
+        # the environment at reset(); a UE has none before its first episode
+        self.x: float | None = None
+        self.y: float | None = None
+        self.stime: int | None = None
+        self.extime: int | None = None
 
     @property
     def point(self):
