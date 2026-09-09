@@ -186,9 +186,25 @@ class MComCore(gymnasium.Env):
         # reset time
         self.time = 0.0
 
-        # set seed
+        # set seed; `seeding` derives one seed per model from it, so an explicit
+        # reset seed must be pushed onto the models and their RNGs dropped —
+        # otherwise they keep the stream built from the constructor's seed
         if seed is not None:
-            self.seeding({"seed": seed})
+            self.seed = seed
+            seeds = self.seeding({"seed": seed})
+            models = {
+                "arrival_params": self.arrival,
+                "channel_params": self.channel,
+                "scheduler_params": self.scheduler,
+                "movement_params": self.movement,
+                "utility_params": self.utility,
+            }
+            for key, model in models.items():
+                if hasattr(model, "seed"):
+                    model.seed = seeds[key]["seed"]
+                    # force `model.reset()` below to rebuild from the new seed
+                    model.rng = None
+            self.rng = None
 
         # initialize RNG or reset (if necessary on episode end)
         if self.reset_rng_episode or self.rng is None:
@@ -377,7 +393,7 @@ class MComCore(gymnasium.Env):
     def macro_datarates(self, datarates):
         """Compute aggregated UE data rates given all its connections."""
         ue_datarates = Counter()
-        for (bs, ue), datarate in self.datarates.items():
+        for (bs, ue), datarate in datarates.items():
             ue_datarates.update({ue: datarate})
         return ue_datarates
 

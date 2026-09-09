@@ -60,7 +60,10 @@ class MComCentralHandler(Handler):
 
     @classmethod
     def check(cls, env):
-        assert [
-            ue.stime <= 0.0 and ue.extime >= env.EP_MAX_TIME
-            for ue in env.users.values()
-        ], "Central environment cannot handle a changing number of UEs."
+        # the episode ends at the time limit or once the last UE departed;
+        # every UE must be present for all of it, else the fixed-size action
+        # and observation vectors would not match the active population
+        ep_end = min(env.EP_MAX_TIME, env.max_departure)
+        assert all(
+            ue.stime <= 0.0 and ue.extime >= ep_end for ue in env.users.values()
+        ), "Central environment cannot handle a changing number of UEs."
