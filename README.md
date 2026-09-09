@@ -64,7 +64,14 @@ The simplest option is to install the latest release of `mobile-env` from [PyPI]
 ```bash
 pip install mobile-env
 ```
-This is recommended for most users. mobile-env is tested on Ubuntu, Windows, and MacOS.
+
+This is recommended for most users. mobile-env requires **Python 3.10 or newer** and is
+tested on Ubuntu, Windows and macOS across Python 3.10-3.14. A plain install is enough to
+create, step *and* render an environment — no extra step for visualization.
+
+Rendering uses [pygame-ce](https://pyga.me/), the maintained fork that Gymnasium itself
+depends on. It provides the same `pygame` module, so if you already have the original
+`pygame` installed in the same environment, uninstall it first — the two cannot coexist.
 
 ### From Source (Development)
 
@@ -81,15 +88,17 @@ source .venv/bin/activate
 uv pip install -e .
 ```
 
-This is equivalent to running `uv pip install -r requirements.txt`.
-
-If you want to run tests or example notebooks, also install the requirements in `tests`:
+Optional extras cover the other workflows:
 
 ```bash
-uv pip install -r tests/requirements.txt
+pip install -e '.[test]'   # pytest and stable-baselines3, to run the test suite
+pip install -e '.[docs]'   # sphinx, to build the documentation
+pip install -e '.[rllib]'  # ray[rllib], for mobile_env.wrappers.multi_agent
 ```
 
-For dependencies for building docs, install the requirements in `docs`.
+The project is developed with [uv](https://docs.astral.sh/uv/). `uv sync` installs the
+locked dependency set plus the development tools (ruff, mypy, pytest), after which
+`uv run pytest`, `uv run ruff check .` and `uv run mypy` reproduce what CI runs.
 
 ## Example Usage
 

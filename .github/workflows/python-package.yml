@@ -1,6 +1,6 @@
 # This workflow runs the build, lints, and tests
 
-name: CI
+name: matrix-build
 
 on:
   push:
@@ -15,46 +15,27 @@ jobs:
   build:
     runs-on: ${{matrix.platform}}
     strategy:
-      # show every combo's real result instead of the matrix cancelling the rest on first failure
-      fail-fast: false
       matrix:
         platform: [ubuntu-latest, macos-latest, windows-latest]
-        # matches setup.py's python_requires (>=3.10); 3.14 excluded because pygame has no
-        # prebuilt wheel for it yet, which breaks the build on all platforms (falls back to a
-        # source build that needs system SDL2/freetype headers CI runners don't have)
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-        exclude:
-          # ray[rllib] (see tests/requirements.txt) has no Windows wheel for 3.13 yet
-          - platform: windows-latest
-            python-version: "3.13"
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install mobile-env and additional dependencies
+    # Installs from pyproject.toml with the `test` extra; the old
+    # tests/requirements.txt was folded into it.
+    - name: Install mobile-env and test dependencies
       run: |
-        # sudo apt update -y
-        # sudo apt install ffmpeg imagemagick
         python -m pip install --upgrade pip
-        pip install .
-        pip install -r tests/requirements.txt
+        pip install '.[test]'
 
-    - name: Lint with ruff
-      run: |
-        ruff check .
-
-    - name: Check formatting with ruff
-      run: |
-        ruff format --check .
-
+    # Linting and type-checking run once, in ci.yml. This workflow answers a
+    # different question: does the package install and pass its tests on every
+    # supported interpreter and operating system?
     - name: Run tests with pytest
       run: |
         pytest
-
-    - name: Run test notebook
-      run: |
-        pytest --nbmake examples/test.ipynb

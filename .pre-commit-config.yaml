@@ -1,13 +1,22 @@
+# Files owned by claude-meta (bin/, .claude/, .meta-version) are delivered by
+# broadcast and replaced wholesale by the next one. Rewriting them here only
+# creates conflicts on the next delivery, so the whitespace hooks skip them.
+exclude: '^(bin/|\.claude/|\.meta-version$)'
+
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-    -   id: check-yaml
-    -   id: end-of-file-fixer
-    -   id: trailing-whitespace
--   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.2
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+
+  # ruff replaces black, flake8 and isort; configuration lives in pyproject.toml
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.6
     hooks:
-    -   id: ruff-check
+      - id: ruff-check
         args: [--fix]
-    -   id: ruff-format
+      - id: ruff-format

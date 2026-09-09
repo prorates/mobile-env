@@ -32,7 +32,7 @@ def log_utility(curr_dr):
     return np.clip(10 * np.log10(curr_dr), MIN_UTILITY, MAX_UTILITY)
 
 
-dr = [i for i in range(100)]
+dr = list(range(100))
 util = [log_utility(dr) for dr in dr]
 plt.plot(dr, util)
 plt.xlabel("Data Rate [Mbit/s]")

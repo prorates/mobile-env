@@ -1,0 +1,13 @@
+# Normalize text to LF in the repository; check out per-platform.
+* text=auto
+
+# Windows scripts must keep CRLF or cmd.exe mis-parses them.
+*.bat text eol=crlf
+
+# Never touch these — line-ending translation corrupts binary content.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ipynb -text
+
+.gitignore merge=union
