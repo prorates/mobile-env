@@ -1,7 +1,8 @@
-# Files owned by claude-meta (bin/, .claude/, .meta-version) are delivered by
-# broadcast and replaced wholesale by the next one. Rewriting them here only
-# creates conflicts on the next delivery, so the whitespace hooks skip them.
-exclude: '^(bin/|\.claude/|\.meta-version$)'
+# Files owned by claude-meta (bin/, .claude/, .agents/, plugins/, .meta-version)
+# are delivered by broadcast and replaced wholesale by the next one. Rewriting
+# them here only creates conflicts on the next delivery, so the whitespace hooks
+# skip them.
+exclude: '^(bin/|\.claude/|\.agents/|plugins/|\.meta-version$)'
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
