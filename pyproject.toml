@@ -101,10 +101,11 @@ include = ["mobile_env*"]
 # each sync into a whole-tree conflict rather than a review of real changes.
 line-length = 100
 target-version = "py310"
-# Not this project's code: bin/ and .claude/ are delivered by claude-meta and are
-# overwritten by the next broadcast, so linting them only creates churn.
-# Notebooks are executed artifacts, checked by running them, not by linting.
-extend-exclude = [".claude", "bin", "examples"]
+# Not this project's code: bin/, .claude/, .agents/ and plugins/ are delivered by
+# claude-meta and are overwritten by the next broadcast, so linting them only
+# creates churn. Notebooks are executed artifacts, checked by running them, not
+# by linting.
+extend-exclude = [".agents", ".claude", "bin", "examples", "plugins"]
 
 [tool.ruff.format]
 # Docs are teaching material: mechanical formatting collapsed handler stub
